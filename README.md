@@ -1,5 +1,9 @@
 # EXCLE助手
 
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+![Platform: Windows](https://img.shields.io/badge/Platform-Windows%20%7C%20Excel-blue.svg)
+![Dependencies: none](https://img.shields.io/badge/Dependencies-none-brightgreen.svg)
+
 > 独立实现的 Excel 效率插件 · **320 个功能** · 单 DLL · 零第三方依赖 · 纯本地运算
 
 把常用表格操作集中起来的 Excel 加载项：文本清洗、数值与日期、行列编辑、格式美化、汇总拆分、
@@ -83,4 +87,6 @@ AI 用例全部走**本地 mock 供应商**，无需外网与真实额度也能�
 
 ## 许可
 
-未声明许可证（默认保留所有权利）。如需开源使用，可自行添加 MIT / Apache-2.0。
+[MIT](LICENSE) © 2026 chichenji
+
+可自由使用、修改、分发（含商用），保留版权与许可声明即可。软件按「原样」提供，不附带任何担保。
