@@ -1,0 +1,18 @@
+# 工作区与备份（不发布）
+_work/
+
+# 构建中间产物
+*.locked-*.dll
+*.pdb
+*.user
+*.suo
+.vs/
+
+# 反注册/旧版注册表备份（机器相关）
+docs/uninstall-*.reg
+docs/legacy-*.reg
+
+# 临时文件
+*.tmp
+*.log
+~$*

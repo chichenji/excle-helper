@@ -1,0 +1,550 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<customUI xmlns="http://schemas.microsoft.com/office/2009/07/customui" onLoad="OnRibbonLoad">
+  <ribbon>
+    <tabs>
+      <tab id="tabHome" label="EXCLE助手">
+        <group id="gStart" label="开始">
+          <button id="bPanel" label="功能面板" tag="ui.panel" onAction="OnButton" getImage="OnGetImage" size="large" screentip="可搜索的功能面板" supertip="输入中文关键词或拼音首字母筛选全部功能，回车执行。" />
+          <menu id="mNew1" label="回退" size="large" getImage="OnGetImage" screentip="回退">
+            <button id="bUndoLast" label="撤销上次操作" tag="undo.last" onAction="OnButton" />
+            <button id="bRedoLast" label="重做上次操作" tag="undo.redo" onAction="OnButton" />
+            <menuSeparator id="sepUn1" />
+            <button id="bUndoHist" label="历史记录（多步回退）…" tag="undo.history" onAction="OnButton" />
+            <button id="bUndoClear" label="清空回退历史" tag="undo.clear" onAction="OnButton" />
+          </menu>
+          <button id="bHelp" label="帮助" tag="x.help" onAction="OnButton" getImage="OnGetImage" size="large" screentip="使用说明与结果去向" />
+          <button id="bAbout" label="关于" tag="ui.about" onAction="OnButton" getImage="OnGetImage" size="large" screentip="版本与架构信息" />
+          <button id="bRepeat" label="重复上次" tag="x.repeat" onAction="OnButton" getImage="OnGetImage" size="large" screentip="再执行一次上一个功能" />
+        </group>
+        <group id="gText" label="文本">
+          <menu id="mKeep" label="提取字符" size="large" getImage="OnGetImage" screentip="只保留或删除指定类型字符">
+            <button id="bKeepCn" label="只保留中文" tag="t.keep.cn" onAction="OnButton" />
+            <button id="bKeepEn" label="只保留英文" tag="t.keep.en" onAction="OnButton" />
+            <button id="bKeepNum" label="只保留数字" tag="t.keep.num" onAction="OnButton" />
+            <button id="bKeepSym" label="只保留符号" tag="t.keep.sym" onAction="OnButton" />
+            <menuSeparator id="sepKeep1" />
+            <button id="bDelCn" label="删除中文" tag="t.del.cn" onAction="OnButton" />
+            <button id="bDelEn" label="删除英文" tag="t.del.en" onAction="OnButton" />
+            <button id="bDelNum" label="删除数字" tag="t.del.num" onAction="OnButton" />
+            <button id="bDelSym" label="删除符号" tag="t.del.sym" onAction="OnButton" />
+          </menu>
+          <menu id="mSpace" label="空格清理" size="large" getImage="OnGetImage" screentip="空格与不可见字符处理">
+            <button id="bTrimAll" label="删除所有空格" tag="t.trim.all" onAction="OnButton" />
+            <button id="bTrimHead" label="删除开头空格" tag="t.trim.head" onAction="OnButton" />
+            <button id="bTrimTail" label="删除末尾空格" tag="t.trim.tail" onAction="OnButton" />
+            <menuSeparator id="sepSp1" />
+            <button id="bSqueeze" label="多余空格压缩为一个" tag="t.squeeze" onAction="OnButton" />
+            <button id="bDelInv" label="删除不可见字符" tag="t.del.invisible" onAction="OnButton" />
+            <button id="bDelText" label="删除指定文本…" tag="t.del.text" onAction="OnButton" />
+          </menu>
+          <menu id="mInsCut" label="插入与截取" size="large" getImage="OnGetImage" screentip="首尾中间插入或截取">
+            <button id="bInsHead" label="插入到开头…" tag="t.ins.head" onAction="OnButton" />
+            <button id="bInsTail" label="插入到末尾…" tag="t.ins.tail" onAction="OnButton" />
+            <button id="bInsMid" label="插入到中间…" tag="t.ins.mid" onAction="OnButton" />
+            <menuSeparator id="sepIC1" />
+            <button id="bCutHead" label="截取开头N个字符…" tag="t.cut.head" onAction="OnButton" />
+            <button id="bCutTail" label="截取末尾N个字符…" tag="t.cut.tail" onAction="OnButton" />
+            <button id="bCutMid" label="截取中间字符…" tag="t.cut.mid" onAction="OnButton" />
+          </menu>
+          <menu id="mCase" label="大小写与补全" size="large" getImage="OnGetImage" screentip="大小写、补零、打码、全半角">
+            <button id="bUpper" label="全部大写" tag="t.case.upper" onAction="OnButton" />
+            <button id="bLower" label="全部小写" tag="t.case.lower" onAction="OnButton" />
+            <button id="bProper" label="单词首字母大写" tag="t.case.proper" onAction="OnButton" />
+            <button id="bInvert" label="大小写反转" tag="t.case.invert" onAction="OnButton" />
+            <menuSeparator id="sepCase1" />
+            <button id="bPadLeft" label="补零（定长编码）…" tag="t.padleft" onAction="OnButton" />
+            <button id="bMaskMid" label="文本中间打码…" tag="t.mask.mid" onAction="OnButton" />
+            <button id="bWidth" label="全角/半角切换…" tag="t.width.toggle" onAction="OnButton" />
+          </menu>
+          <menu id="mNew2" label="高级文本" size="large" getImage="OnGetImage" screentip="高级文本">
+            <button id="bT2Sim" label="两列相似度" tag="t2.similar" onAction="OnButton" />
+            <button id="bT2Fuzzy" label="模糊匹配对照表…" tag="t2.fuzzy" onAction="OnButton" />
+            <button id="bT2RxCols" label="正则提取到多列…" tag="t2.rxcols" onAction="OnButton" />
+            <button id="bT2Replace" label="批量替换（规则表）…" tag="t2.batchreplace" onAction="OnButton" />
+            <menuSeparator id="sepT2a" />
+            <button id="bT2Uniq" label="删除重复字符" tag="t2.uniqchar" onAction="OnButton" />
+            <button id="bT2Len" label="按长度筛选…" tag="t2.bylen" onAction="OnButton" />
+            <button id="bT2Init" label="提取首字母…" tag="t2.initials" onAction="OnButton" />
+            <button id="bT2Between" label="截取标记之间…" tag="t2.between" onAction="OnButton" />
+            <button id="bT2Count" label="统计字符出现次数…" tag="t2.count" onAction="OnButton" />
+            <menuSeparator id="sepNew2_1" />
+            <button id="bReverse" label="文本倒序" tag="t.reverse" onAction="OnButton" />
+            <button id="bLen" label="文本长度" tag="t.len" onAction="OnButton" />
+            <button id="bFreq" label="词频统计" tag="t.freq" onAction="OnButton" />
+            <button id="bNumEn" label="数字转英文金额" tag="t.num2en" onAction="OnButton" />
+            <menuSeparator id="sepTM1" />
+            <button id="bRxEx" label="正则提取…" tag="t.rx.extract" onAction="OnButton" />
+            <button id="bRxRp" label="正则替换…" tag="t.rx.replace" onAction="OnButton" />
+            <menuSeparator id="sepTM2" />
+            <button id="bT2S" label="繁体转简体" tag="cn.t2s" onAction="OnButton" />
+            <button id="bS2T" label="简体转繁体" tag="cn.s2t" onAction="OnButton" />
+          </menu>
+        </group>
+        <group id="gNumDate" label="数值与日期">
+          <menu id="mSeq" label="录入序列" size="large" getImage="OnGetImage" screentip="数字/字母/星期/月/中文/罗马序列">
+            <button id="bSeqNum" label="1 2 3 数字序列" tag="n.seq.num" onAction="OnButton" />
+            <button id="bSeqLetter" label="A B C 字母序列" tag="n.seq.letter" onAction="OnButton" />
+            <button id="bSeqWeek" label="星期一序列" tag="n.seq.week" onAction="OnButton" />
+            <button id="bSeqMonth" label="1月序列" tag="n.seq.month" onAction="OnButton" />
+            <button id="bSeqCn" label="一 二 三 中文序列" tag="n.seq.cnnum" onAction="OnButton" />
+            <button id="bSeqRoman" label="I II III 罗马序列" tag="n.seq.roman" onAction="OnButton" />
+          </menu>
+          <menu id="mRound" label="舍入取整" size="large" getImage="OnGetImage" screentip="四舍五入/上/下/银行家/分数">
+            <button id="bRound" label="四舍五入…" tag="n.round" onAction="OnButton" />
+            <button id="bRoundUp" label="向上舍入…" tag="n.roundup" onAction="OnButton" />
+            <button id="bRoundDn" label="向下舍入…" tag="n.rounddown" onAction="OnButton" />
+            <button id="bBankers" label="四舍六入五成双…" tag="n.bankers" onAction="OnButton" />
+            <menuSeparator id="sepRd1" />
+            <button id="bInt" label="取整" tag="n.int" onAction="OnButton" />
+            <button id="bFrac" label="小数转分数…" tag="n.frac" onAction="OnButton" />
+          </menu>
+          <menu id="mConv" label="数值转换" size="large" getImage="OnGetImage" screentip="文本转数字、中文数字、金额、百分比">
+            <button id="bToText" label="文本型数字转换" tag="n.totext" onAction="OnButton" />
+            <button id="bCn2Ar" label="中文数字转阿拉伯" tag="n.cntoar" onAction="OnButton" />
+            <button id="bAr2Cn" label="阿拉伯数字转中文" tag="n.artoCN" onAction="OnButton" />
+            <button id="bRmb" label="人民币大写" tag="n.rmb" onAction="OnButton" />
+            <menuSeparator id="sepCv1" />
+            <button id="bPercent" label="转百分比" tag="n.percent" onAction="OnButton" />
+            <button id="bThousand" label="加千分位" tag="n.thousand" onAction="OnButton" />
+            <button id="bDisplay" label="只保留显示值" tag="n.display" onAction="OnButton" />
+          </menu>
+          <menu id="mNum2" label="随机与单位" size="large" getImage="OnGetImage" screentip="随机数、随机抽样、单位换算、分箱、求和校验、密码">
+            <button id="bN2Rand" label="随机数（整数/小数/正态）…" tag="n2.rand" onAction="OnButton" />
+            <button id="bN2Sample" label="随机抽样…" tag="n2.sample" onAction="OnButton" />
+            <button id="bN2Unit" label="单位换算…" tag="n2.unit" onAction="OnButton" />
+            <button id="bN2Bins" label="区间分箱…" tag="n2.bins" onAction="OnButton" />
+            <menuSeparator id="sepN2a" />
+            <button id="bN2Sum" label="求和校验…" tag="n2.sumcheck" onAction="OnButton" />
+            <button id="bN2Pwd" label="生成随机密码…" tag="n2.password" onAction="OnButton" />
+            <menuSeparator id="sepCalc1" />
+            <button id="bMath" label="批量加减乘除…" tag="n.math" onAction="OnButton" />
+            <button id="bFillBlank" label="填充空白单元格" tag="n.fillblank" onAction="OnButton" />
+            <button id="bRandSplit" label="随机分摊…" tag="n.randsplit" onAction="OnButton" />
+          </menu>
+          <menu id="mNew3" label="日期时间" size="large" getImage="OnGetImage" screentip="日期时间">
+            <button id="bDtNorm" label="中文日期标准化" tag="dt.normalize" onAction="OnButton" />
+            <button id="bDtFmtD" label="设置日期格式…" tag="dt.fmt.date" onAction="OnButton" />
+            <button id="bDtFmtT" label="设置时间格式…" tag="dt.fmt.time" onAction="OnButton" />
+            <menuSeparator id="sepNew3_1" />
+            <button id="bDtDiff" label="日期间隔…" tag="dt.diff" onAction="OnButton" />
+            <button id="bDtAdd" label="日期加减…" tag="dt.add" onAction="OnButton" />
+            <button id="bDtWd" label="工作日天数…" tag="dt.workdays" onAction="OnButton" />
+            <button id="bDtWdAfter" label="N 个工作日后…" tag="dt.workday.after" onAction="OnButton" />
+            <button id="bDtAge" label="年龄/工龄" tag="dt.age" onAction="OnButton" />
+            <menuSeparator id="sepNew3_2" />
+            <button id="bDtSplit" label="日期拆分(6 列)" tag="dt.split" onAction="OnButton" />
+            <button id="bDtCombine" label="年月日合并为日期" tag="dt.combine" onAction="OnButton" />
+            <button id="bDtStat" label="按年月季周统计" tag="dt.range.stat" onAction="OnButton" />
+            <button id="bDtRand" label="随机日期…" tag="dt.rand" onAction="OnButton" />
+            <button id="bDtClear" label="清除非日期" tag="dt.clear.invalid" onAction="OnButton" />
+            <menuSeparator id="sepNew3_3" />
+            <button id="bDtTs" label="时间戳互转…" tag="dt.timestamp" onAction="OnButton" />
+            <button id="bDtLunar" label="公历 ↔ 农历…" tag="dt.lunar" onAction="OnButton" />
+          </menu>
+        </group>
+        <group id="gEdit" label="编辑">
+          <menu id="mCopy" label="复制粘贴" size="large" getImage="OnGetImage" screentip="可见区、只粘数值、复制N次、连行高列宽">
+            <button id="bCpVisible" label="复制可见区域到…" tag="e.copy.to" onAction="OnButton" />
+            <button id="bCpValues" label="只粘贴数值到…" tag="e.copy.values" onAction="OnButton" />
+            <button id="bCpTimes" label="复制 N 次…" tag="e.copy.n" onAction="OnButton" />
+            <button id="bCpAll" label="全复制(含行高列宽)…" tag="e.copy.all" onAction="OnButton" />
+            <menuSeparator id="sepCp1" />
+            <button id="bCpSheets" label="复制到多表…" tag="e.copy.sheets" onAction="OnButton" />
+            <button id="bCpMerge" label="复制到合并区域…" tag="e.copy.merge" onAction="OnButton" />
+          </menu>
+          <menu id="mNew4" label="清空与删除" size="large" getImage="OnGetImage" screentip="清空与删除">
+            <button id="bClrUnsel" label="清空未选中区域" tag="e.clear.unselected" onAction="OnButton" />
+            <button id="bClrGiven" label="清空指定区域…" tag="e.clear.given" onAction="OnButton" />
+            <menuSeparator id="sepClr1" />
+            <button id="bClrZero" label="清空 0 值" tag="d.clear.zero" onAction="OnButton" />
+            <button id="bClrNonNum" label="清空非数字" tag="d.clear.nonnum" onAction="OnButton" />
+            <button id="bClrErr" label="清空错误值" tag="d.clear.err" onAction="OnButton" />
+            <menuSeparator id="sepNew4_1" />
+            <button id="bDelBlankCells" label="删除空单元格(上移)" tag="e.del.blankcells" onAction="OnButton" />
+            <button id="bDelBlankRow" label="删除空行" tag="d.del.blankrows" onAction="OnButton" />
+            <button id="bDelBlankCol" label="删除空列" tag="d.del.blankcols" onAction="OnButton" />
+            <button id="bDelBlankRowC" label="删除含空值整行" tag="d.del.blankrowcells" onAction="OnButton" />
+            <button id="bDelHidden" label="删除隐藏行/列" tag="d.del.hidden" onAction="OnButton" />
+            <menuSeparator id="sepDel1" />
+            <button id="bDelObj" label="删除图形对象" tag="e.del.objects" onAction="OnButton" />
+            <button id="bDelTb" label="删除文本框" tag="e.del.textbox" onAction="OnButton" />
+            <button id="bDelCF" label="删除条件格式" tag="e.del.cf" onAction="OnButton" />
+          </menu>
+          <menu id="mNew5" label="插入与去重" size="large" getImage="OnGetImage" screentip="插入与去重">
+            <button id="bInsRows" label="插入 N 行…" tag="d.ins.rows" onAction="OnButton" />
+            <button id="bInsCols" label="插入 N 列…" tag="d.ins.cols" onAction="OnButton" />
+            <button id="bDelEvery" label="间隔删除行…" tag="d.del.every" onAction="OnButton" />
+            <menuSeparator id="sepNew5_1" />
+            <button id="bDupDel" label="删除重复值" tag="d.dup.del" onAction="OnButton" />
+            <button id="bDupUniq" label="提取唯一值" tag="d.dup.uniq" onAction="OnButton" />
+            <button id="bDupHi" label="高亮重复值" tag="d.dup.highlight" onAction="OnButton" />
+            <button id="bDupCount" label="统计重复次数" tag="d.dup.count" onAction="OnButton" />
+          </menu>
+          <menu id="mMergeCells" label="合并单元格" size="large" getImage="OnGetImage" screentip="合并相同/取消/行列拼接/空白并上">
+            <button id="bMergeSame" label="合并相同单元格" tag="d.merge.same" onAction="OnButton" />
+            <button id="bMergeUns" label="取消合并相同单元格" tag="d.merge.unsame" onAction="OnButton" />
+            <button id="bMergeKeep" label="合并且保留全部内容" tag="d.merge.keep" onAction="OnButton" />
+            <menuSeparator id="sepMg1" />
+            <button id="bMergeRow" label="按行合并并拼接…" tag="e.merge.rowcat" onAction="OnButton" />
+            <button id="bMergeCol" label="按列合并并拼接…" tag="e.merge.colcat" onAction="OnButton" />
+            <button id="bMergeBlank" label="空白并入上方" tag="e.merge.blank" onAction="OnButton" />
+          </menu>
+          <menu id="mNew6" label="行列重排" size="large" getImage="OnGetImage" screentip="行列重排">
+            <button id="bTranspose" label="行列转换(转置)" tag="d.transpose" onAction="OnButton" />
+            <button id="bFlipRows" label="行顺序上下倒置" tag="e.flip.rows" onAction="OnButton" />
+            <button id="bDimFlat" label="二维转一维" tag="d.dim.flat" onAction="OnButton" />
+            <button id="bDimMatrix" label="一维转二维…" tag="d.dim.matrix" onAction="OnButton" />
+            <menuSeparator id="sepNew6_1" />
+            <button id="bCombo" label="排列组合…" tag="e.combo" onAction="OnButton" />
+            <button id="bSplitRow" label="整行拆分…" tag="e.split.row" onAction="OnButton" />
+            <button id="bCmpTwo" label="两区域对比…" tag="d.cmp.two" onAction="OnButton" />
+          </menu>
+        </group>
+      </tab>
+      <tab id="tabData" label="格式与数据">
+        <group id="gFormat" label="格式">
+          <button id="bAutoFit" label="自动调整" tag="f.autofit" onAction="OnButton" getImage="OnGetImage" size="large" screentip="自动调整行高列宽" />
+          <button id="bBorder" label="加边框" tag="f.border" onAction="OnButton" getImage="OnGetImage" size="large" screentip="一键细边框" />
+          <button id="bHead" label="表头美化" tag="f.headstyle" onAction="OnButton" getImage="OnGetImage" size="large" screentip="深蓝底白字加粗居中" />
+          <menu id="mNew7" label="填充与更多格式" size="large" getImage="OnGetImage" screentip="填充与更多格式">
+            <button id="bRowH" label="统一行高…" tag="f.rowheight" onAction="OnButton" />
+            <button id="bColW" label="统一列宽…" tag="f.colwidth" onAction="OnButton" />
+            <button id="bFreeze" label="冻结到当前单元格" tag="f.freeze" onAction="OnButton" />
+            <button id="bClrFmt" label="清除格式(留内容)" tag="f.clearfmt" onAction="OnButton" />
+            <menuSeparator id="sepFmt1" />
+            <button id="bFmtMulti" label="格式套用到多表…" tag="f.copymulti" onAction="OnButton" />
+            <menuSeparator id="sepNew7_1" />
+            <button id="bX2Sum" label="按颜色求和/计数" tag="x2.color.sum" onAction="OnButton" />
+            <button id="bX2Ext" label="按颜色提取到新表" tag="x2.color.extract" onAction="OnButton" />
+            <button id="bX2Rep" label="按颜色替换内容…" tag="x2.color.replace" onAction="OnButton" />
+          </menu>
+          <menu id="mNew8" label="条件格式" size="large" getImage="OnGetImage" screentip="条件格式">
+            <button id="bCfValue" label="条件标色" tag="cf.value" onAction="OnButton" getImage="OnGetImage" screentip="大于/小于/等于/介于/重复值标色" />
+            <menuSeparator id="sepNew8_1" />
+            <button id="bCfBars" label="数据条" tag="cf.bars" onAction="OnButton" getImage="OnGetImage" screentip="单元格内条形图，不改数据" />
+            <menuSeparator id="sepNew8_2" />
+            <button id="bCfScale" label="三色阶" tag="cf.scale" onAction="OnButton" getImage="OnGetImage" screentip="红-黄-绿渐变" />
+          </menu>
+          <button id="bStripe" label="隔行填色" tag="f.stripe" onAction="OnButton" getImage="OnGetImage" size="large" screentip="斑马纹" />
+        </group>
+        <group id="gClean" label="提取与清洗">
+          <menu id="mNew9" label="提取与分列" size="large" getImage="OnGetImage" screentip="提取与分列">
+            <button id="bExtPhone" label="提取手机号" tag="t.ext.phone" onAction="OnButton" />
+            <button id="bExtEmail" label="提取邮箱" tag="t.ext.email" onAction="OnButton" />
+            <button id="bExtUrl" label="提取网址" tag="t.ext.url" onAction="OnButton" />
+            <button id="bExtNum" label="提取数字" tag="t.ext.num" onAction="OnButton" />
+            <button id="bExtDate" label="提取日期" tag="t.ext.date" onAction="OnButton" />
+            <menuSeparator id="sepNew9_1" />
+            <button id="bSplit" label="按分隔符分列…" tag="t.split" onAction="OnButton" />
+            <button id="bJoin" label="多列合并…" tag="t.join" onAction="OnButton" />
+          </menu>
+          <menu id="mCnMore" label="更多校验" size="large" getImage="OnGetImage" screentip="拼音首字母、银行卡、信用代码">
+            <button id="bPy" label="拼音首字母" tag="c.py.first" onAction="OnButton" />
+            <button id="bBank" label="银行卡号校验" tag="c.bank.check" onAction="OnButton" />
+            <button id="bUsci" label="信用代码校验" tag="c.usci.check" onAction="OnButton" />
+          </menu>
+          <menu id="mCheck" label="校验标记" size="large" getImage="OnGetImage" screentip="邮箱、空值、首尾空格、重复行">
+            <button id="bEmail" label="邮箱校验" tag="v.email.check" onAction="OnButton" />
+            <button id="bNull" label="标记空值" tag="v.null.highlight" onAction="OnButton" />
+            <button id="bSpace" label="首尾空格标记" tag="v.space.check" onAction="OnButton" />
+            <button id="bDupRow" label="重复行标色" tag="v.dup.row" onAction="OnButton" />
+          </menu>
+          <menu id="mAudit" label="数据体检" size="large" getImage="OnGetImage" screentip="一键体检、分组序号、小计行、同名列合并、表格转换、隔行插空">
+            <button id="bQ2Audit" label="一键数据体检" tag="q2.audit" onAction="OnButton" />
+            <button id="bQ2Seq" label="分组序号" tag="q2.seq.group" onAction="OnButton" />
+            <button id="bQ2Sub" label="插入小计行…" tag="q2.subtotal" onAction="OnButton" />
+            <menuSeparator id="sepQ2a" />
+            <button id="bQ2Merge" label="合并同名列" tag="q2.colmerge" onAction="OnButton" />
+            <button id="bQ2Table" label="表格 ↔ 普通区域" tag="q2.table.toggle" onAction="OnButton" />
+            <button id="bQ2Blank" label="隔行插入空白行…" tag="q2.blank.insert" onAction="OnButton" />
+          </menu>
+          <menu id="mNew10" label="隐私与安全" size="large" getImage="OnGetImage" screentip="隐私与安全">
+            <button id="bP2Addr" label="地址拆分（省市区）" tag="p2.addr.split" onAction="OnButton" />
+            <button id="bP2Mask" label="一键脱敏" tag="p2.mask.batch" onAction="OnButton" />
+            <menuSeparator id="sepP2a" />
+            <button id="bP2Enc" label="文本加密…" tag="p2.encrypt" onAction="OnButton" />
+            <button id="bP2Dec" label="文本解密…" tag="p2.decrypt" onAction="OnButton" />
+            <menuSeparator id="sepP2b" />
+            <button id="bP2Dup" label="跨表重复检查…" tag="p2.dup.cross" onAction="OnButton" />
+            <button id="bX2TblDiff" label="两表差异对比…" tag="x2.table.diff" onAction="OnButton" />
+            <button id="bX2CellDiff" label="两单元格差异…" tag="x2.cell.diff" onAction="OnButton" />
+            <menuSeparator id="sepNew10_1" />
+            <button id="bSecStruct" label="保护/取消结构保护" tag="sec.structure" onAction="OnButton" />
+            <button id="bSecLock" label="批量锁定单元格" tag="sec.lock" onAction="OnButton" />
+            <menuSeparator id="sepNew10_2" />
+            <button id="bSecHide" label="隐藏公式" tag="sec.hide.formula" onAction="OnButton" />
+            <button id="bSecMeta" label="清除文档属性" tag="sec.meta" onAction="OnButton" />
+            <menuSeparator id="sepNew10_3" />
+            <button id="bSecUnlink" label="断开外部链接" tag="sec.unlink" onAction="OnButton" getImage="OnGetImage" screentip="外链公式转当前值" />
+          </menu>
+          <menu id="mId2" label="身份与联系" size="large" getImage="OnGetImage" screentip="身份证、手机号、姓名">
+            <button id="bIdInfo" label="提取性别/生日/年龄" tag="c.id.info" onAction="OnButton" getImage="OnGetImage" screentip="身份证解析" />
+            <button id="bIdCheck" label="判断合法性" tag="c.id.check" onAction="OnButton" getImage="OnGetImage" screentip="身份证校验" />
+            <button id="bIdUp" label="15 位升 18 位" tag="c.id.15to18" onAction="OnButton" getImage="OnGetImage" screentip="身份证升位" />
+            <button id="bIdMask" label="部分变星号" tag="c.id.mask" onAction="OnButton" getImage="OnGetImage" screentip="身份证打码" />
+            <menuSeparator id="sepId2" />
+            <button id="bPhSeg" label="3-4-4 分段显示" tag="c.phone.seg" onAction="OnButton" getImage="OnGetImage" screentip="手机号分段" />
+            <button id="bPhMask" label="中间变星号" tag="c.phone.mask" onAction="OnButton" getImage="OnGetImage" screentip="手机号打码" />
+            <menuSeparator id="sepId3" />
+            <button id="bNmSplit" label="姓名分开(姓/名)" tag="c.name.split" onAction="OnButton" getImage="OnGetImage" screentip="姓名拆分" />
+            <button id="bNmMask" label="姓名打码" tag="c.name.mask" onAction="OnButton" getImage="OnGetImage" screentip="姓名打码" />
+          </menu>
+          <menu id="mObj2" label="批注与链接" size="large" getImage="OnGetImage" screentip="批量批注、导出批注、超链接">
+            <button id="bCmtAdd" label="批量插入批注…" tag="o.comment.add" onAction="OnButton" getImage="OnGetImage" screentip="批量批注" />
+            <button id="bCmtDel" label="删除批注" tag="o.comment.del" onAction="OnButton" getImage="OnGetImage" screentip="删除批注" />
+            <button id="bCmtExport" label="导出批注" tag="o.comment.export" onAction="OnButton" getImage="OnGetImage" screentip="导出批注" />
+            <menuSeparator id="sepObj2" />
+            <button id="bLinkAdd" label="批量插入超链接" tag="o.link.add" onAction="OnButton" getImage="OnGetImage" screentip="批量超链接" />
+            <button id="bLinkDel" label="删除超链接" tag="o.link.del" onAction="OnButton" getImage="OnGetImage" screentip="删除超链接" />
+          </menu>
+        </group>
+        <group id="gSummary" label="汇总统计">
+          <menu id="mNew11" label="合并" size="large" getImage="OnGetImage" screentip="合并">
+            <button id="bMergeTwo" label="合并两表…" tag="sm.merge.two" onAction="OnButton" />
+            <button id="bMergeMulti" label="合并多表…" tag="sm.merge.multi" onAction="OnButton" />
+            <menuSeparator id="sepNew11_1" />
+            <button id="bMergeBooks" label="合并多簿" tag="sm.merge.books" onAction="OnButton" getImage="OnGetImage" screentip="整簿合并所有工作表" />
+          </menu>
+          <menu id="mSumUp" label="按位置汇总" size="large" getImage="OnGetImage" screentip="多表/多簿/整文件夹累加求和">
+            <button id="bSumSheets" label="汇总多表…" tag="sm.sum.sheets" onAction="OnButton" />
+            <button id="bSumBooks" label="汇总多簿…" tag="sm.sum.books" onAction="OnButton" />
+            <button id="bSumMaster" label="汇总大师（整文件夹）…" tag="sm.sum.master" onAction="OnButton" />
+          </menu>
+          <menu id="mSplitMore" label="更多拆分" size="large" getImage="OnGetImage" screentip="拆分工作簿、按列值拆到多文件">
+            <button id="bSplitBook" label="拆分工作簿…" tag="sm.split.book" onAction="OnButton" />
+            <button id="bSplitVals" label="按列值拆分到多文件…" tag="sm.split.values" onAction="OnButton" />
+          </menu>
+          <menu id="mStat2" label="统计分析" size="large" getImage="OnGetImage" screentip="占比/环比/同比/排名/描述统计/频数/分组/相关">
+            <button id="bStShare" label="占比" tag="st.share" onAction="OnButton" />
+            <button id="bStMom" label="环比" tag="st.mom" onAction="OnButton" />
+            <button id="bStYoy" label="同比…" tag="st.yoy" onAction="OnButton" />
+            <button id="bStRank" label="排名…" tag="st.rank" onAction="OnButton" />
+            <button id="bStDesc" label="描述统计" tag="st.describe" onAction="OnButton" />
+            <button id="bStFreq" label="频数分布…" tag="st.freq" onAction="OnButton" />
+            <button id="bStGroup" label="多列分组汇总…" tag="st.group" onAction="OnButton" />
+            <button id="bStCorr" label="相关系数" tag="st.corr" onAction="OnButton" />
+          </menu>
+          <button id="bWsSplit" label="拆分工作表" tag="s.split" onAction="OnButton" getImage="OnGetImage" size="large" screentip="按列值拆成多个工作表，保留原格式" />
+          <menu id="mJoin" label="多表关联" size="large" getImage="OnGetImage" screentip="JOIN / 主键刷新 / 记录合并 / 列名对齐 / 透视表 / 交叉表">
+            <button id="bJtJoin" label="多表关联合并（JOIN）…" tag="jt.join" onAction="OnButton" />
+            <menuSeparator id="sepJt_bJtUpdate" />
+            <button id="bJtUpdate" label="按主键刷新字段…" tag="jt.update" onAction="OnButton" />
+            <menuSeparator id="sepJt_bJtGroup" />
+            <button id="bJtGroup" label="记录级合并…" tag="jt.group.merge" onAction="OnButton" />
+            <menuSeparator id="sepJt_bJtAppend" />
+            <button id="bJtAppend" label="列名对齐追加…" tag="jt.append" onAction="OnButton" />
+            <menuSeparator id="sepJt_bJtPivot" />
+            <button id="bJtPivot" label="一键生成透视表…" tag="jt.pivot" onAction="OnButton" />
+            <menuSeparator id="sepJt_bJtCross" />
+            <button id="bJtCross" label="交叉表（行转列）…" tag="jt.crosstab" onAction="OnButton" />
+          </menu>
+        </group>
+        <group id="gSheetFile" label="工作表与文件">
+          <menu id="mNew12" label="工作表" size="large" getImage="OnGetImage" screentip="工作表">
+            <button id="bWsNew" label="新建工作表" tag="w.new" onAction="OnButton" getImage="OnGetImage" screentip="按名称新建工作表" />
+            <menuSeparator id="sepNew12_1" />
+            <button id="bWsCopy" label="复制工作表…" tag="w.copy" onAction="OnButton" />
+            <button id="bWsMove" label="移动工作表…" tag="w.move" onAction="OnButton" />
+            <button id="bWsRename" label="重命名当前表…" tag="w.rename.one" onAction="OnButton" />
+            <button id="bWsProtect" label="保护/取消保护" tag="w.protect" onAction="OnButton" />
+            <menuSeparator id="sepWs1" />
+            <button id="bWsHide" label="隐藏指定表…" tag="w.hide" onAction="OnButton" />
+            <button id="bWsUnhide" label="取消隐藏全部" tag="w.unhide" onAction="OnButton" />
+          </menu>
+          <menu id="mWsName" label="表名与目录" size="large" getImage="OnGetImage" screentip="智能索引、表名目录、提取表名">
+            <button id="bWsSmart" label="智能索引" tag="w.smart.index" onAction="OnButton" />
+            <button id="bWsNames" label="提取表名到选区" tag="w.names.extract" onAction="OnButton" />
+            <button id="bWsIndex" label="表名目录" tag="s.index" onAction="OnButton" />
+          </menu>
+          <menu id="mWsBatch" label="批量处理" size="large" getImage="OnGetImage" screentip="批量重命名/建表/删除/排序/合并">
+            <button id="bWsRenameB" label="批量重命名工作表…" tag="s.rename.batch" onAction="OnButton" />
+            <button id="bWsCreateB" label="按选区批量建表" tag="s.create.batch" onAction="OnButton" />
+            <button id="bWsDelB" label="删除指定表…" tag="s.delete" onAction="OnButton" />
+            <button id="bWsSort" label="工作表排序…" tag="s.sort" onAction="OnButton" />
+            <button id="bWsMergeS" label="合并工作表…" tag="s.merge" onAction="OnButton" />
+          </menu>
+          <menu id="mNew13" label="文件与导出" size="large" getImage="OnGetImage" screentip="文件与导出">
+            <button id="bBookRename" label="重命名本簿…" tag="w.book.rename" onAction="OnButton" />
+            <button id="bFileRename" label="规则重命名文件…" tag="w.file.rename" onAction="OnButton" />
+            <button id="bFileList" label="文件目录…" tag="w.file.list" onAction="OnButton" />
+            <menuSeparator id="sepBk1" />
+            <button id="bFolderNew" label="创建文件夹…" tag="w.folder.create" onAction="OnButton" />
+            <button id="bFolderEmp" label="清理空文件夹…" tag="w.folder.empty" onAction="OnButton" />
+            <menuSeparator id="sepNew13_1" />
+            <button id="bSaveOne" label="另存本表…" tag="s.saveone" onAction="OnButton" />
+            <button id="bCsv" label="输出 CSV…" tag="w.export.csv" onAction="OnButton" />
+            <button id="bPdf" label="输出 PDF…" tag="s.pdf" onAction="OnButton" />
+            <button id="bTxt" label="输出文本…" tag="s.txt" onAction="OnButton" />
+            <menuSeparator id="sepEx1" />
+            <button id="bSlim" label="工作簿瘦身" tag="w.slim" onAction="OnButton" />
+          </menu>
+          <menu id="mGov" label="工作簿治理" size="large" getImage="OnGetImage" screentip="快照对比 / 公式审计 / 易失函数 / 命名与链接 / 体检">
+            <button id="bWbSnap" label="保存当前快照" tag="wb.snapshot" onAction="OnButton" />
+            <menuSeparator id="sep_bWbDiff" />
+            <button id="bWbDiff" label="与快照对比…" tag="wb.diff" onAction="OnButton" />
+            <menuSeparator id="sep_bFmAudit" />
+            <button id="bFmAudit" label="公式依赖审计…" tag="fm.audit" onAction="OnButton" />
+            <menuSeparator id="sep_bFmVol" />
+            <button id="bFmVol" label="易失函数统计…" tag="fm.volatile" onAction="OnButton" />
+            <menuSeparator id="sep_bWbNames" />
+            <button id="bWbNames" label="命名清单…" tag="wb.names.clean" onAction="OnButton" />
+            <menuSeparator id="sep_bWbLinks" />
+            <button id="bWbLinks" label="外部链接清单…" tag="wb.links" onAction="OnButton" />
+            <menuSeparator id="sep_bWbHealth" />
+            <button id="bWbHealth" label="工作簿体检…" tag="wb.health" onAction="OnButton" />
+          </menu>
+        </group>
+        <group id="gQuality" label="数据质量与效率">
+          <menu id="mQuality" label="质量工具" size="large" getImage="OnGetImage" screentip="异常值 / 缺失值 / 模糊重复 / 数据字典 / 单位统一 / 电话地址规范化 / 变更日志">
+            <button id="bQlOutlier" label="异常值检测…" tag="ql.outlier" onAction="OnButton" />
+            <menuSeparator id="sep_bQlMissing" />
+            <button id="bQlMissing" label="缺失值处理…" tag="ql.missing" onAction="OnButton" />
+            <menuSeparator id="sep_bQlDup" />
+            <button id="bQlDup" label="模糊重复检测…" tag="ql.dup.fuzzy" onAction="OnButton" />
+            <menuSeparator id="sep_bQlDict" />
+            <button id="bQlDict" label="数据字典" tag="ql.dict" onAction="OnButton" />
+            <menuSeparator id="sep_bQlUnit" />
+            <button id="bQlUnit" label="单位统一…" tag="ql.unit.unify" onAction="OnButton" />
+            <menuSeparator id="sep_bQlPhone" />
+            <button id="bQlPhone" label="电话规范化…" tag="ql.phone.norm" onAction="OnButton" />
+            <menuSeparator id="sep_bQlAddr" />
+            <button id="bQlAddr" label="地址规范化" tag="ql.addr.norm" onAction="OnButton" />
+            <menuSeparator id="sep_bQlLog" />
+            <button id="bQlLog" label="记录变更日志" tag="ql.changelog" onAction="OnButton" />
+          </menu>
+          <menu id="mStyleCh" label="样式与图表" size="large" getImage="OnGetImage" screentip="条件格式管理 / 迷你图 / 样式库 / 图表批处理">
+            <button id="bCfMgr" label="条件格式管理器…" tag="cf.manage" onAction="OnButton" />
+            <menuSeparator id="sep_bSpark" />
+            <button id="bSpark" label="批量插入迷你图…" tag="fmt.sparkline" onAction="OnButton" />
+            <menuSeparator id="sep_bStyle" />
+            <button id="bStyle" label="单元格样式库…" tag="fmt.style" onAction="OnButton" />
+            <menuSeparator id="sep_bChSet" />
+            <button id="bChSet" label="图表批处理…" tag="ch.set" onAction="OnButton" />
+          </menu>
+          <menu id="mEff" label="工具与效率" size="large" getImage="OnGetImage" screentip="条码 / 选区导图 / 最近使用 / 收藏夹">
+            <button id="bBarcode" label="生成条码（Code39）" tag="pic.barcode" onAction="OnButton" />
+            <menuSeparator id="sep_bExpRange" />
+            <button id="bExpRange" label="选区导出图片…" tag="pic.export.range" onAction="OnButton" />
+            <menuSeparator id="sep_bRecent" />
+            <button id="bRecent" label="最近使用…" tag="ui.recent" onAction="OnButton" />
+            <menuSeparator id="sep_bFav" />
+            <button id="bFav" label="收藏夹…" tag="ui.favorites" onAction="OnButton" />
+          </menu>
+        </group>
+      </tab>
+      <tab id="tabTools" label="工具与输出">
+        <group id="gInput" label="录入与公式">
+          <menu id="mNew14" label="下拉与控件" size="large" getImage="OnGetImage" screentip="下拉与控件">
+            <button id="bVdList" label="批量插入下拉…" tag="vd.list" onAction="OnButton" />
+            <button id="bVdCascade" label="二级联动下拉…" tag="vd.list.cascade" onAction="OnButton" />
+            <menuSeparator id="sepNew14_1" />
+            <button id="bVdCheck" label="批量插入复选框" tag="vd.checkbox" onAction="OnButton" />
+            <button id="bVdRadio" label="批量插入单选框" tag="vd.radio" onAction="OnButton" />
+          </menu>
+          <menu id="mNew15" label="输入限制" size="large" getImage="OnGetImage" screentip="输入限制">
+            <button id="bVdNoDup" label="禁止重复" tag="vd.no.dup" onAction="OnButton" getImage="OnGetImage" screentip="该列不允许输入重复值" />
+            <menuSeparator id="sepNew15_1" />
+            <button id="bVdRange" label="数值范围" tag="vd.range" onAction="OnButton" getImage="OnGetImage" screentip="限制只能输入指定区间" />
+          </menu>
+          <button id="bVdQuick" label="快速录入" tag="vd.quick" onAction="OnButton" getImage="OnGetImage" size="large" screentip="从词库挑词写入当前单元格" />
+          <menu id="mNew16" label="公式工具" size="large" getImage="OnGetImage" screentip="公式工具">
+            <button id="bFmToText" label="公式转文本" tag="fm.to.text" onAction="OnButton" />
+            <button id="bFmToF" label="文本转公式" tag="fm.to.formula" onAction="OnButton" />
+            <menuSeparator id="sepNew16_1" />
+            <button id="bFmRef" label="引用切换" tag="fm.ref.toggle" onAction="OnButton" getImage="OnGetImage" screentip="相对/绝对引用批量切换" />
+            <menuSeparator id="sepNew16_2" />
+            <button id="bFmRep" label="公式内替换" tag="fm.replace" onAction="OnButton" getImage="OnGetImage" screentip="只替换公式，不动普通文本" />
+            <menuSeparator id="sepNew16_3" />
+            <button id="bFmShow" label="显示全部公式" tag="fm.show.all" onAction="OnButton" getImage="OnGetImage" screentip="整表切公式视图，可还原" />
+            <menuSeparator id="sepNew16_4" />
+            <button id="bFmHelp" label="函数速查" tag="fm.help" onAction="OnButton" getImage="OnGetImage" screentip="常用函数语法与易错点" />
+          </menu>
+        </group>
+        <group id="gPrint" label="打印">
+          <menu id="mNew17" label="打印设置" size="large" getImage="OnGetImage" screentip="打印设置">
+            <button id="bPrArea" label="设置打印区域" tag="pr.area" onAction="OnButton" />
+            <button id="bPrTitle" label="设置顶端标题行" tag="pr.title" onAction="OnButton" />
+            <menuSeparator id="sepNew17_1" />
+            <button id="bPrPageNum" label="统一页码" tag="pr.pagenum" onAction="OnButton" getImage="OnGetImage" screentip="页脚 第 &amp;P 页 / 共 &amp;N 页" />
+            <menuSeparator id="sepNew17_2" />
+            <button id="bPrHeader" label="批量页眉页脚…" tag="pr.header" onAction="OnButton" />
+            <button id="bPrBreak" label="插入分页符…" tag="pr.pagebreak" onAction="OnButton" />
+            <button id="bPrFit" label="缩放到一页宽" tag="pr.fit" onAction="OnButton" />
+            <button id="bPrCenter" label="页面居中…" tag="pr.center" onAction="OnButton" />
+            <button id="bPrGrid" label="打印网格线(开/关)" tag="pr.grid" onAction="OnButton" />
+          </menu>
+          <button id="bPrBatch" label="批量输出" tag="pr.batch" onAction="OnButton" getImage="OnGetImage" size="large" screentip="逐表导出 PDF / 整簿 PDF / 直接打印" />
+          <button id="bPrPreview" label="分页预览巡检" tag="pr.preview" onAction="OnButton" getImage="OnGetImage" size="large" screentip="逐表检查分页与页数" />
+        </group>
+        <group id="gMedia" label="图片与模板">
+          <menu id="mNew18" label="图片" size="large" getImage="OnGetImage" screentip="图片">
+            <button id="bPicInsert" label="批量插图" tag="pic.insert" onAction="OnButton" getImage="OnGetImage" screentip="按文件名匹配单元格，等比贴合" />
+            <menuSeparator id="sepNew18_1" />
+            <button id="bPicSize" label="统一尺寸" tag="pic.size" onAction="OnButton" getImage="OnGetImage" screentip="按厘米统一，可锁比例" />
+            <menuSeparator id="sepNew18_2" />
+            <button id="bPicAnchor" label="贴合单元格" tag="pic.anchor" onAction="OnButton" />
+            <button id="bPicExport" label="导出图片…" tag="pic.export" onAction="OnButton" />
+            <button id="bPicDel" label="删除图片" tag="pic.del" onAction="OnButton" />
+            <button id="bPicWm" label="添加水印…" tag="pic.watermark" onAction="OnButton" />
+            <menuSeparator id="sepPic2" />
+          </menu>
+          <menu id="mNew19" label="二维码与截图" size="large" getImage="OnGetImage" screentip="二维码与截图">
+            <button id="bPicQr" label="生成二维码（取单元格文本）" tag="pic.qrcode" onAction="OnButton" />
+            <menuSeparator id="sepNew19_1" />
+            <button id="bPicSnip" label="截图插入（3 秒后截屏）" tag="pic.snip" onAction="OnButton" />
+          </menu>
+          <menu id="mTpl" label="套打模板" size="large" getImage="OnGetImage" screentip="标签排版、工资条、按模板批量出簿">
+            <button id="bTplLabel" label="标签套打排版…" tag="tpl.label" onAction="OnButton" />
+            <button id="bTplPay" label="生成工资条" tag="tpl.payslip" onAction="OnButton" />
+            <button id="bTplBook" label="按模板批量出簿…" tag="tpl.book" onAction="OnButton" />
+          </menu>
+        </group>
+        <group id="gAi" label="AI 助手">
+          <menu id="mAiSet" label="设置与测试" size="large" getImage="OnGetImage" screentip="API 设置与连接测试">
+            <button id="bAiSet" label="AI 设置…" tag="ai.settings" onAction="OnButton" />
+            <button id="bAiTest" label="测试连接" tag="ai.test" onAction="OnButton" />
+          </menu>
+          <button id="bAiFormula" label="生成公式" tag="ai.formula" onAction="OnButton" getImage="OnGetImage" size="large" screentip="用自然语言描述需求，AI 给出公式" />
+          <button id="bAiExplain" label="解释公式" tag="ai.explain" onAction="OnButton" getImage="OnGetImage" size="large" screentip="解释选中单元格里的公式" />
+          <button id="bAiFix" label="公式纠错" tag="ai.fix" onAction="OnButton" getImage="OnGetImage" size="large" screentip="检查并修正选中公式" />
+          <button id="bAiPanel" label="AI 面板" tag="ai.panel" onAction="OnButton" getImage="OnGetImage" size="large" screentip="对话式助手，可引用当前选区" />
+        </group>
+        <group id="gAiData" label="AI 数据">
+          <menu id="mAiProcess" label="数据加工" size="large" getImage="OnGetImage" screentip="智能填充 / 分类打标 / 字段提取">
+            <button id="bAiFill" label="智能填充…" tag="ai.fill" onAction="OnButton" />
+            <menuSeparator id="sep_bAiClassify" />
+            <button id="bAiClassify" label="分类打标…" tag="ai.classify" onAction="OnButton" />
+            <menuSeparator id="sep_bAiExtract" />
+            <button id="bAiExtract" label="字段提取…" tag="ai.extract" onAction="OnButton" />
+          </menu>
+          <menu id="mAiInsight" label="洞察与建议" size="large" getImage="OnGetImage" screentip="洞察 / 清洗建议 / 筛选 / 图表 / 字典 / 问答">
+            <button id="bAiInsight" label="数据洞察" tag="ai.insight" onAction="OnButton" />
+            <menuSeparator id="sep_bAiClean" />
+            <button id="bAiClean" label="清洗建议" tag="ai.clean" onAction="OnButton" />
+            <menuSeparator id="sep_bAiFilter" />
+            <button id="bAiFilter" label="自然语言筛选…" tag="ai.filter" onAction="OnButton" />
+            <menuSeparator id="sep_bAiChart" />
+            <button id="bAiChart" label="图表建议" tag="ai.chart" onAction="OnButton" />
+            <menuSeparator id="sep_bAiDict" />
+            <button id="bAiDict" label="数据字典" tag="ai.dict" onAction="OnButton" />
+            <menuSeparator id="sep_bAiAsk" />
+            <button id="bAiAsk" label="表格问答…" tag="ai.ask" onAction="OnButton" />
+          </menu>
+          <menu id="mAiAdv" label="AI 进阶" size="large" getImage="OnGetImage" screentip="报告 / 关联建议 / 整表纠错 / 翻译 / 合成数据 / 异常解释">
+            <button id="bAiReport" label="生成分析报告" tag="ai.report" onAction="OnButton" />
+            <menuSeparator id="sep_bAiJoin" />
+            <button id="bAiJoin" label="关联键建议…" tag="ai.join" onAction="OnButton" />
+            <menuSeparator id="sep_bAiFixAll" />
+            <button id="bAiFixAll" label="整表公式体检" tag="ai.fix.all" onAction="OnButton" />
+            <menuSeparator id="sep_bAiTrans" />
+            <button id="bAiTrans" label="批量翻译…" tag="ai.translate" onAction="OnButton" />
+            <menuSeparator id="sep_bAiSynth" />
+            <button id="bAiSynth" label="合成测试数据…" tag="ai.synth" onAction="OnButton" />
+            <menuSeparator id="sep_bAiOutlier" />
+            <button id="bAiOutlier" label="异常解释" tag="ai.explain.outlier" onAction="OnButton" />
+          </menu>
+        </group>
+      </tab>
+    </tabs>
+  </ribbon>
+</customUI>
