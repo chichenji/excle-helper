@@ -46,8 +46,18 @@ namespace ExcleHelper
             try
             {
                 dynamic vis;
-                try { vis = src.SpecialCells(12); }   // xlCellTypeVisible
-                catch { Xl.Bad("选区没有可见单元格。"); return true; }
+                if (Xl.CellCount(src) <= 1)
+                {
+                    bool hidden = false;
+                    try { hidden = (bool)src.EntireRow.Hidden || (bool)src.EntireColumn.Hidden; } catch { }
+                    if (hidden) { Xl.Bad("选区没有可见单元格。"); return true; }
+                    vis = src;
+                }
+                else
+                {
+                    try { vis = src.SpecialCells(12); }   // xlCellTypeVisible
+                    catch { Xl.Bad("选区没有可见单元格。"); return true; }
+                }
                 vis.Copy(dst);
             }
             finally { Xl.Turn(false); }
@@ -109,22 +119,30 @@ namespace ExcleHelper
             int rows = (int)src.Rows.Count, cols = (int)src.Columns.Count;
             int dRow = (int)dst.Row, dCol = (int)dst.Column;
             dynamic ws = dst.Worksheet;
-            int[] widths = new int[cols];
-            int[] heights = new int[rows];
+            double[] widths = new double[cols];
+            double[] heights = new double[rows];
             Xl.Turn(true);
             try
             {
-                for (int j = 0; j < cols; j++) widths[j] = (int)src.Columns[j + 1].ColumnWidth;
-                for (int i = 0; i < rows; i++) heights[i] = (int)src.Rows[i + 1].RowHeight;
+                for (int j = 0; j < cols; j++)
+                {
+                    try { widths[j] = Convert.ToDouble(src.Columns[j + 1].ColumnWidth, CultureInfo.InvariantCulture); }
+                    catch { widths[j] = -1; }
+                }
+                for (int i = 0; i < rows; i++)
+                {
+                    try { heights[i] = Convert.ToDouble(src.Rows[i + 1].RowHeight, CultureInfo.InvariantCulture); }
+                    catch { heights[i] = -1; }
+                }
                 src.Copy(dst);
                 Xl.App.CutCopyMode = 0;
                 for (int j = 0; j < cols; j++)
                 {
-                    if (widths[j] > 0) ws.Columns[dCol + j].ColumnWidth = widths[j];
+                    if (widths[j] > 0) try { ws.Columns[dCol + j].ColumnWidth = widths[j]; } catch { }
                 }
                 for (int i = 0; i < rows; i++)
                 {
-                    if (heights[i] > 0) ws.Rows[dRow + i].RowHeight = heights[i];
+                    if (heights[i] > 0) try { ws.Rows[dRow + i].RowHeight = heights[i]; } catch { }
                 }
             }
             finally { Xl.Turn(false); }
@@ -262,10 +280,17 @@ namespace ExcleHelper
             Xl.Turn(true);
             try
             {
+                if (Xl.CellCount(r) <= 1)
+                {
+                    if (Xl.S(r.Value2).Length > 0) { Xl.Say("选区没有空单元格。"); return true; }
+                    r.Delete(-4162);                     // xlShiftUp
+                    Xl.Say(Xl.Fmt("已删除 {n} 个空单元格（下方内容上移）。", 1));
+                    return true;
+                }
                 dynamic blanks;
                 try { blanks = r.SpecialCells(4); }      // xlCellTypeBlanks
                 catch { Xl.Say("选区没有空单元格。"); return true; }
-                int n = (int)blanks.Count;
+                int n = (int)Xl.CellCount(blanks);
                 blanks.Delete(-4162);                    // xlShiftUp
                 Xl.Say(Xl.Fmt("已删除 {n} 个空单元格（下方内容上移）。", n));
             }
@@ -361,7 +386,7 @@ namespace ExcleHelper
                     }
                     dynamic s1 = ws.Cells[firstRow + i, firstCol];
                     dynamic s2 = ws.Cells[firstRow + i, firstCol + cols - 1];
-                    ws.Range(s1, s2).Merge();
+                    Xl.MergeSilent(ws.Range(s1, s2));
                     s1.Value2 = sb.ToString();
                 }
             }
@@ -396,7 +421,7 @@ namespace ExcleHelper
                     }
                     dynamic s1 = ws.Cells[firstRow, firstCol + j];
                     dynamic s2 = ws.Cells[firstRow + rows - 1, firstCol + j];
-                    ws.Range(s1, s2).Merge();
+                    Xl.MergeSilent(ws.Range(s1, s2));
                     s1.Value2 = sb.ToString();
                 }
             }
@@ -419,13 +444,19 @@ namespace ExcleHelper
             {
                 for (int j = 0; j < cols; j++)
                 {
-                    for (int i = 1; i < rows; i++)
+                    int i = 0;
+                    while (i < rows)
                     {
-                        if (Xl.S(a[i, j]).Trim().Length > 0) continue;
-                        if (Xl.S(a[i - 1, j]).Trim().Length == 0) continue;
-                        dynamic s1 = ws.Cells[firstRow + i - 1, firstCol + j];
-                        dynamic s2 = ws.Cells[firstRow + i, firstCol + j];
-                        try { ws.Range(s1, s2).Merge(); merged++; } catch { }
+                        if (Xl.S(a[i, j]).Trim().Length == 0) { i++; continue; }
+                        int end = i;
+                        while (end + 1 < rows && Xl.S(a[end + 1, j]).Trim().Length == 0) end++;
+                        if (end > i)
+                        {
+                            dynamic s1 = ws.Cells[firstRow + i, firstCol + j];
+                            dynamic s2 = ws.Cells[firstRow + end, firstCol + j];
+                            try { Xl.MergeSilent(ws.Range(s1, s2)); merged += (end - i); } catch { }
+                        }
+                        i = end + 1;
                     }
                 }
             }

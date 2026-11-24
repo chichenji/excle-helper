@@ -45,7 +45,8 @@ namespace ExcleHelper
             {
                 string opts = Ask.One("批量插入下拉", "选项（逗号分隔）", "是,否");
                 if (opts == null || opts.Trim().Length == 0) return true;
-                formula = "=" + Quote(opts);
+                formula = CleanCsv(opts);
+                if (formula.Length == 0) return true;
             }
 
             Xl.Turn(true);
@@ -65,18 +66,16 @@ namespace ExcleHelper
             return true;
         }
 
-        private static string Quote(string csv)
+        private static string CleanCsv(string csv)
         {
             StringBuilder sb = new StringBuilder();
-            sb.Append('"');
             foreach (string s in csv.Split(new char[] { ',', '，', '|' }))
             {
-                string t = s.Trim();
+                string t = s.Trim().Replace("\"", "");
                 if (t.Length == 0) continue;
-                if (sb.Length > 1) sb.Append(',');
-                sb.Append(t.Replace("\"", ""));
+                if (sb.Length > 0) sb.Append(',');
+                sb.Append(t);
             }
-            sb.Append('"');
             return sb.ToString();
         }
 
@@ -137,7 +136,7 @@ namespace ExcleHelper
                 string[] p2 = Ask.Show("二级联动",
                     new string[] { "父类下拉放在哪个单元格（如 B2）", "子类下拉放在哪个单元格（如 C2）" },
                     new string[] { "B2", "C2" });
-                if (p2 == null) { Xl.Turn(false); return true; }
+                if (p2 == null) { Xl.DeleteSheetSilent(lk); return true; }
                 dynamic ws = Xl.Act;
                 string parentAddr = p2[0].Trim();
                 string childAddr = p2[1].Trim();
@@ -145,7 +144,7 @@ namespace ExcleHelper
                 dynamic cc = ws.Range[childAddr];
 
                 pc.Validation.Delete();
-                pc.Validation.Add(3, 1, 1, "=" + string.Join(",", parents.ToArray()));
+                pc.Validation.Add(3, 1, 1, "='" + (string)lk.Name + "'!$A$1:$" + ColLetter(parents.Count) + "$1");
                 pc.Validation.InCellDropdown = true;
 
                 cc.Validation.Delete();
@@ -191,7 +190,7 @@ namespace ExcleHelper
             try
             {
                 r.Validation.Delete();
-                r.Validation.Add(0, 1, 1, formula);   // xlValidateCustom
+                r.Validation.Add(7, 1, 1, formula);   // xlValidateCustom = 7
                 r.Validation.IgnoreBlank = true;
                 r.Validation.ShowError = true;
                 r.Validation.ErrorTitle = "重复输入";
@@ -270,7 +269,9 @@ namespace ExcleHelper
                         dynamic sh = ws.Shapes.AddFormControl(1, left, top, 16, 16);   // xlCheckBox
                         try
                         {
-                            sh.LinkedCell = (string)ws.Cells[firstRow + i, firstCol + j].Address(false, false);
+                            string linkAddr = (string)ws.Cells[firstRow + i, firstCol + j].Address(false, false);
+                            try { sh.ControlFormat.LinkedCell = linkAddr; }
+                            catch { sh.LinkedCell = linkAddr; }
                             sh.OnAction = "";
                         }
                         catch { }
@@ -311,7 +312,12 @@ namespace ExcleHelper
                         double bl = (double)cell.Left + 2;
                         double bt = (double)cell.Top + 3;
                         dynamic rb = ws.Shapes.AddFormControl(7, bl, bt, 14, 14);      // xlOptionButton
-                        try { rb.LinkedCell = (string)ws.Cells[firstRow + i, firstCol + cols].Address(false, false); }
+                        try
+                        {
+                            string linkAddr = (string)ws.Cells[firstRow + i, firstCol + cols].Address(false, false);
+                            try { rb.ControlFormat.LinkedCell = linkAddr; }
+                            catch { rb.LinkedCell = linkAddr; }
+                        }
                         catch { unbound++; }
                     }
                     groups++;

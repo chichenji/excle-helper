@@ -198,7 +198,7 @@ namespace ExcleHelper
                 {
                     string name = (string)wb.Worksheets[i].Name;
                     if (!hit.Contains(name)) continue;
-                    try { wb.Worksheets[i].Delete(); ok++; }
+                    try { Xl.DeleteSheetSilent(wb.Worksheets[i]); ok++; }
                     catch { }
                 }
             }
@@ -355,8 +355,9 @@ namespace ExcleHelper
                 if (c > width) width = c;
                 for (int i = 0; i < r; i++)
                 {
-                    if (!headerDone && i == 0)
+                    if (i == 0)
                     {
+                        if (headerDone) continue;
                         object[] h = new object[width];
                         for (int j = 0; j < c; j++) h[j] = a[0, j];
                         rowsData.Add(h);
@@ -372,7 +373,7 @@ namespace ExcleHelper
 
             object[,] outv = new object[rowsData.Count, width];
             for (int i = 0; i < rowsData.Count; i++)
-                for (int j = 0; j < width; j++) outv[i, j] = rowsData[i][j];
+                for (int j = 0; j < width; j++) outv[i, j] = j < rowsData[i].Length ? rowsData[i][j] : null;
 
             dynamic sh = Xl.AddSheet("合并结果");
             Xl.Dump(sh, 1, 1, outv);
@@ -388,14 +389,20 @@ namespace ExcleHelper
             string path = SavePath("Excel 工作簿|*.xlsx", ((string)sh.Name).Replace("/", "_") + ".xlsx");
             if (path == null) return true;
             Xl.Turn(true);
+            dynamic nb = null;
             try
             {
                 sh.Copy();
-                dynamic nb = Xl.App.ActiveWorkbook;
-                nb.SaveAs(path);
+                nb = Xl.App.ActiveWorkbook;
+                Xl.SaveWorkbookAsXlsx(nb, path);
                 nb.Close(false);
+                nb = null;
             }
-            finally { Xl.Turn(false); }
+            finally
+            {
+                if (nb != null) { try { nb.Close(false); } catch { } }
+                Xl.Turn(false);
+            }
             Xl.Say("已另存为：\n" + path);
             return true;
         }
@@ -446,11 +453,25 @@ namespace ExcleHelper
         // ---------------- merge workbooks ----------------
         private static bool MergeWorkbooks()
         {
-            string folder = PickFolder("选择包含要合并的 Excel 文件的文件夹");
+            string folder = PickFolder("选择包含要合并的表格文件的文件夹");
             if (folder == null) return true;
-            string[] files = Directory.GetFiles(folder, "*.xlsx");
-            if (files.Length == 0) files = Directory.GetFiles(folder, "*.xls*");
-            if (files.Length == 0) { Xl.Bad("该文件夹下没有 Excel 文件。"); return true; }
+            List<string> fileList = new List<string>();
+            foreach (string pat in new string[] { "*.xlsx", "*.xlsm", "*.xls", "*.et" })
+            {
+                try
+                {
+                    foreach (string f in Directory.GetFiles(folder, pat))
+                    {
+                        string fn = Path.GetFileName(f) ?? "";
+                        if (fn.StartsWith("~$", StringComparison.Ordinal)) continue;
+                        if (!fileList.Contains(f)) fileList.Add(f);
+                    }
+                }
+                catch { }
+            }
+            fileList.Sort(StringComparer.OrdinalIgnoreCase);
+            string[] files = fileList.ToArray();
+            if (files.Length == 0) { Xl.Bad("该文件夹下没有 Excel / WPS 表格文件。"); return true; }
             if (!Xl.Ask("将合并 " + files.Length + " 个文件（每个文件取其第一张工作表），继续？")) return true;
 
             List<object[]> rowsData = new List<object[]>();
@@ -475,8 +496,9 @@ namespace ExcleHelper
                         if (c > width) width = c;
                         for (int i = 0; i < r; i++)
                         {
-                            if (!headerDone && i == 0)
+                            if (i == 0)
                             {
+                                if (headerDone) continue;
                                 object[] h = new object[width];
                                 for (int j = 0; j < c; j++) h[j] = a[0, j];
                                 rowsData.Add(h);
@@ -501,7 +523,7 @@ namespace ExcleHelper
             if (rowsData.Count == 0) { Xl.Bad("没有读到数据。"); return true; }
             object[,] outv = new object[rowsData.Count, width];
             for (int i = 0; i < rowsData.Count; i++)
-                for (int j = 0; j < width; j++) outv[i, j] = rowsData[i][j];
+                for (int j = 0; j < width; j++) outv[i, j] = j < rowsData[i].Length ? rowsData[i][j] : null;
 
             dynamic sh = Xl.AddSheet("多簿合并");
             Xl.Dump(sh, 1, 1, outv);
@@ -513,7 +535,7 @@ namespace ExcleHelper
         private static bool Slim()
         {
             if (NoBook()) return true;
-            if (!Xl.Ask("工作簿瘦身会把所有公式转为值、清除多余格式引用，且不可撤销。\n建议先保存副本。继续？")) return true;
+            if (!Xl.Ask("工作簿瘦身会把所有公式转为值、断开外部链接，且不可撤销。\n建议先保存副本。继续？")) return true;
             dynamic wb = Xl.Book;
             int n = (int)wb.Worksheets.Count;
             Xl.Turn(true);
@@ -526,9 +548,22 @@ namespace ExcleHelper
                     int r = (int)ur.Rows.Count, c = (int)ur.Columns.Count;
                     if (r < 1 || c < 1) continue;
                     object[,] a = Xl.Vals(ur, out r, out c);
-                    ur.Value2 = a;
+                    if (r == 1 && c == 1) ur.Value2 = a[0, 0];
+                    else ur.Value2 = a;
                 }
-                try { wb.LinkSources(1); wb.LinkSources(2); } catch { }
+                try
+                {
+                    object src = wb.LinkSources(1);
+                    Array arr = src as Array;
+                    if (arr != null)
+                    {
+                        for (int i = arr.GetUpperBound(0); i >= arr.GetLowerBound(0); i--)
+                        {
+                            try { wb.BreakLink((string)arr.GetValue(i), 1); } catch { }
+                        }
+                    }
+                }
+                catch { }
             }
             finally { Xl.Turn(false); }
             Xl.Say("瘦身完成（公式已转值）。请另存为新文件。");

@@ -57,13 +57,14 @@ namespace ExcleHelper
             try
             {
                 dynamic ur = ws.UsedRange;
+                int r0 = (int)ur.Row, c0 = (int)ur.Column;
                 int r = (int)ur.Rows.Count, c = (int)ur.Columns.Count;
                 if ((long)r * c > 200000) { Xl.Bad("区域过大，请先缩小数据范围。"); return true; }
-                for (int i = 1; i <= r; i++)
+                for (int i = 0; i < r; i++)
                 {
-                    for (int j = 1; j <= c; j++)
+                    for (int j = 0; j < c; j++)
                     {
-                        dynamic cell = ws.Cells[i, j];
+                        dynamic cell = ws.Cells[r0 + i, c0 + j];
                         int n = 0;
                         try { n = (int)cell.FormatConditions.Count; } catch { }
                         if (n == 0) continue;
@@ -152,14 +153,16 @@ namespace ExcleHelper
                     dynamic target = ws.Cells[firstRow + i, firstCol + cols];
                     try
                     {
-                        target.SparklineGroups.Add(kind, src);
+                        string srcAddr = (string)src.Address(false, false);
+                        target.SparklineGroups.Add(kind, srcAddr);
                         made++;
                     }
                     catch { }
                 }
             }
-            catch (Exception ex) { Xl.Bad("插入迷你图失败（需要 Excel 2010+）：" + AiHttp.Sanitize(ex.Message)); }
+            catch (Exception ex) { Xl.Bad("插入迷你图失败：" + AiHttp.Sanitize(ex.Message)); }
             finally { Xl.Turn(false); }
+            if (made == 0) { Xl.Bad("插入迷你图失败（当前 Excel/WPS 版本可能不支持迷你图 COM 接口）。"); return true; }
             Xl.Say("已插入 " + made + " 个迷你图（写在每行右侧一列）。");
             return true;
         }
@@ -298,7 +301,12 @@ namespace ExcleHelper
 
             StringBuilder bits = new StringBuilder();
             bits.Append(Code39['*']);
-            foreach (char c in text) bits.Append(Code39[c]);
+            foreach (char c in text)
+            {
+                bits.Append('0');   // Code39 字符间窄空（1 模块）
+                bits.Append(Code39[c]);
+            }
+            bits.Append('0');
             bits.Append(Code39['*']);
 
             // 渲染：每个 bit 3px 宽，含静区
@@ -319,9 +327,9 @@ namespace ExcleHelper
                     }
                 }
                 string path = Path.Combine(Path.GetTempPath(), "exclehelper-barcode-" + Guid.NewGuid().ToString("N") + ".png");
-                bmp.Save(path, System.Drawing.Imaging.ImageFormat.Png);
                 try
                 {
+                    bmp.Save(path, System.Drawing.Imaging.ImageFormat.Png);
                     double left = (double)cell.Left + 2;
                     double top = (double)cell.Top + 2;
                     double w = Math.Min(width, 260);
@@ -331,6 +339,7 @@ namespace ExcleHelper
                     Xl.Say("已插入 Code39 条码：" + text + "（" + bits.Length + " 模块）。");
                 }
                 catch (Exception ex) { Xl.Bad("插入条码失败：" + AiHttp.Sanitize(ex.Message)); }
+                finally { try { if (File.Exists(path)) File.Delete(path); } catch { } }
             }
             return true;
         }
@@ -353,11 +362,38 @@ namespace ExcleHelper
             try
             {
                 r.CopyPicture(1, 2);   // xlScreen, xlBitmap
-                dynamic co = r.Worksheet.ChartObjects().Add(0, 0, Math.Max(120, (double)r.Width), Math.Max(80, (double)r.Height));
-                dynamic ch = co.Chart;
-                ch.Paste();
-                ch.Export(path, "PNG");
-                co.Delete();
+                bool saved = false;
+                try
+                {
+                    if (Clipboard.ContainsImage())
+                    {
+                        using (Image img = Clipboard.GetImage())
+                        {
+                            if (img != null && img.Width > 0 && img.Height > 0)
+                            {
+                                img.Save(path, System.Drawing.Imaging.ImageFormat.Png);
+                                saved = true;
+                            }
+                        }
+                    }
+                }
+                catch { }
+                if (!saved)
+                {
+                    dynamic co = null;
+                    try
+                    {
+                        co = r.Worksheet.ChartObjects().Add(0, 0, Math.Max(120, (double)r.Width), Math.Max(80, (double)r.Height));
+                        try { co.Select(); } catch { }
+                        dynamic ch = co.Chart;
+                        ch.Paste();
+                        ch.Export(path, "PNG");
+                    }
+                    finally
+                    {
+                        if (co != null) try { co.Delete(); } catch { }
+                    }
+                }
                 Xl.Say("已导出到：\n" + path);
             }
             catch (Exception ex) { Xl.Bad("导出失败：" + AiHttp.Sanitize(ex.Message)); }
@@ -473,8 +509,8 @@ namespace ExcleHelper
             Font = new Font("Microsoft YaHei UI", 9.5f);
 
             Label tip = new Label();
-            tip.Text = editable ? "双击执行；点「移除」从收藏里删除" : "双击执行";
-            tip.SetBounds(12, 10, 380, 20);
+            tip.Text = editable ? "双击执行；可点「添加」「移除」管理收藏" : "双击执行";
+            tip.SetBounds(12, 10, 396, 20);
             tip.ForeColor = Color.FromArgb(100, 116, 139);
             Controls.Add(tip);
 
@@ -493,9 +529,15 @@ namespace ExcleHelper
 
             if (editable)
             {
+                Button add = new Button();
+                add.Text = "添加…";
+                add.SetBounds(12, 336, 96, 30);
+                add.Click += delegate { AddFavorite(); };
+                Controls.Add(add);
+
                 Button remove = new Button();
                 remove.Text = "移除";
-                remove.SetBounds(118, 336, 92, 30);
+                remove.SetBounds(114, 336, 94, 30);
                 remove.Click += delegate
                 {
                     if (_lb.SelectedIndex < 0) return;
@@ -508,9 +550,79 @@ namespace ExcleHelper
 
             Button close = new Button();
             close.Text = "关闭";
-            close.SetBounds(314, 336, 92, 30);
+            close.SetBounds(314, 336, 94, 30);
             close.DialogResult = DialogResult.Cancel;
             Controls.Add(close);
+        }
+
+        private void AddFavorite()
+        {
+            using (Form dlg = new Form())
+            {
+                dlg.Text = "添加收藏功能";
+                dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dlg.StartPosition = FormStartPosition.CenterParent;
+                dlg.MaximizeBox = false; dlg.MinimizeBox = false; dlg.ShowInTaskbar = false;
+                dlg.ClientSize = new Size(420, 420);
+                dlg.Font = Font;
+
+                TextBox search = new TextBox();
+                search.SetBounds(12, 12, 396, 24);
+                dlg.Controls.Add(search);
+
+                ListBox lb = new ListBox();
+                lb.SetBounds(12, 44, 396, 320);
+                lb.IntegralHeight = false;
+                dlg.Controls.Add(lb);
+
+                List<Feature> shown = new List<Feature>();
+                Action refresh = delegate
+                {
+                    shown.Clear();
+                    lb.BeginUpdate();
+                    lb.Items.Clear();
+                    string q = search.Text;
+                    foreach (Feature f in Catalog.All)
+                    {
+                        if (!Catalog.Match(f, q)) continue;
+                        shown.Add(f);
+                        lb.Items.Add(f.Label + "  [" + f.Group + "]");
+                    }
+                    lb.EndUpdate();
+                    if (lb.Items.Count > 0) lb.SelectedIndex = 0;
+                };
+                search.TextChanged += delegate { refresh(); };
+                refresh();
+
+                Action pick = delegate
+                {
+                    if (lb.SelectedIndex < 0 || lb.SelectedIndex >= shown.Count) return;
+                    string tag = shown[lb.SelectedIndex].Tag;
+                    if (!_tags.Contains(tag))
+                    {
+                        _tags.Add(tag);
+                        PresentOps.WriteList("fav", _tags);
+                        Fill();
+                    }
+                    dlg.DialogResult = DialogResult.OK;
+                    dlg.Close();
+                };
+                lb.DoubleClick += delegate { pick(); };
+
+                Button ok = new Button();
+                ok.Text = "添加到收藏";
+                ok.SetBounds(210, 374, 100, 30);
+                ok.Click += delegate { pick(); };
+                dlg.Controls.Add(ok);
+
+                Button cancel = new Button();
+                cancel.Text = "取消";
+                cancel.SetBounds(318, 374, 90, 30);
+                cancel.DialogResult = DialogResult.Cancel;
+                dlg.Controls.Add(cancel);
+
+                dlg.ShowDialog(this);
+            }
         }
 
         private void Fill()

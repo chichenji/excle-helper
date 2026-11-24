@@ -26,6 +26,7 @@ namespace ExcleHelper
         private static List<Feature> _all;
         private static List<string> _categories;
         private static Dictionary<string, Feature> _byId;
+        private static Dictionary<string, string> _menuTagById;
 
         internal static List<Feature> All
         {
@@ -48,8 +49,21 @@ namespace ExcleHelper
         internal static Feature ById(string id)
         {
             if (_byId == null) Load();
+            if (string.IsNullOrEmpty(id)) return null;
             Feature f;
             if (_byId != null && _byId.TryGetValue(id, out f)) return f;
+            return null;
+        }
+
+        /// <summary>getImage 回调按控件 id（含 button 与 menu）返回用于渲染图标的 tag。</summary>
+        internal static string IconTagById(string id)
+        {
+            if (_byId == null) Load();
+            if (string.IsNullOrEmpty(id)) return null;
+            Feature f;
+            if (_byId != null && _byId.TryGetValue(id, out f)) return f.Tag;
+            string tag;
+            if (_menuTagById != null && _menuTagById.TryGetValue(id, out tag)) return tag;
             return null;
         }
 
@@ -57,6 +71,7 @@ namespace ExcleHelper
         {
             _all = new List<Feature>();
             _byId = new Dictionary<string, Feature>(StringComparer.Ordinal);
+            _menuTagById = new Dictionary<string, string>(StringComparer.Ordinal);
             _categories = new List<string>();
             try
             {
@@ -73,6 +88,7 @@ namespace ExcleHelper
                         if (!string.IsNullOrEmpty(uri)) ns.AddNamespace("m", uri);
                         string tabPath = string.IsNullOrEmpty(uri) ? "//tab" : "//m:tab";
                         string groupPath = string.IsNullOrEmpty(uri) ? "group" : "m:group";
+                        string menuPath = string.IsNullOrEmpty(uri) ? ".//menu" : ".//m:menu";
                         string buttonPath = string.IsNullOrEmpty(uri) ? ".//button" : ".//m:button";
 
                         foreach (XmlNode tab in doc.SelectNodes(tabPath, ns))
@@ -81,6 +97,17 @@ namespace ExcleHelper
                             foreach (XmlNode g in tab.SelectNodes(groupPath, ns))
                             {
                                 string gLabel = Attr(g, "label");
+                                foreach (XmlNode mn in g.SelectNodes(menuPath, ns))
+                                {
+                                    string mid = Attr(mn, "id");
+                                    if (string.IsNullOrEmpty(mid)) continue;
+                                    XmlNode firstBtn = mn.SelectSingleNode(buttonPath, ns);
+                                    if (firstBtn != null)
+                                    {
+                                        string mtag = Attr(firstBtn, "tag");
+                                        if (!string.IsNullOrEmpty(mtag)) _menuTagById[mid] = mtag;
+                                    }
+                                }
                                 foreach (XmlNode b in g.SelectNodes(buttonPath, ns))
                                 {
                                     string tag = Attr(b, "tag");

@@ -87,6 +87,16 @@ namespace ExcleHelper
             File.WriteAllText(FilePath, sb.ToString(), Encoding.UTF8);
         }
 
+        internal bool IsLocal
+        {
+            get
+            {
+                if (string.Equals(Provider, "ollama", StringComparison.OrdinalIgnoreCase)) return true;
+                string u = (BaseUrl ?? "").ToLowerInvariant();
+                return u.Contains("localhost") || u.Contains("127.0.0.1") || u.Contains("[::1]");
+            }
+        }
+
         internal string NormalizedBase
         {
             get
@@ -179,17 +189,26 @@ namespace ExcleHelper
         internal static string Chat(AiConfig cfg, string apiKey, List<AiMessage> messages,
                                     Action<string> onDelta, Func<bool> cancelled, out string error)
         {
+            return Chat(cfg, apiKey, messages, onDelta, cancelled, true, out error);
+        }
+
+        internal static string Chat(AiConfig cfg, string apiKey, List<AiMessage> messages,
+                                    Action<string> onDelta, Func<bool> cancelled, bool expectJson, out string error)
+        {
             error = null;
             EnsureTls();
 
-            bool jsonMode = cfg.JsonMode;
+            bool jsonMode = expectJson && cfg.JsonMode;
             string body = BuildBody(cfg, messages, cfg.Streaming, jsonMode);
             string text;
             string err;
             if (TryPost(cfg, apiKey, body, onDelta, cancelled, out text, out err)) return text;
 
             // JSON 模式不被支持时自动降级重试一次
-            if (jsonMode && err != null && err.IndexOf("response_format", StringComparison.OrdinalIgnoreCase) >= 0)
+            if (jsonMode && err != null &&
+                (err.IndexOf("response_format", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                 err.IndexOf("json", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                 err.IndexOf("400", StringComparison.Ordinal) >= 0))
             {
                 jsonMode = false;
                 body = BuildBody(cfg, messages, cfg.Streaming, false);

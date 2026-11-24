@@ -14,11 +14,11 @@ namespace ExcleHelper
         private readonly Timer _t = new Timer();
         private int _dots;
         private int _phase;
-        private readonly string _stage;
         private FlatButton _cancel;
 
         internal AiProgress(string title)
         {
+            Text = "EXCLE助手 · " + title;
             HeadTitle = "AI 正在处理";
             HeadSubtitle = title;
             HeadGlyph = "✦";
@@ -31,7 +31,6 @@ namespace ExcleHelper
             msg.Font = UiKit.FontOf(10f, FontStyle.Regular);
             msg.ForeColor = UiKit.Ink;
             Controls.Add(msg);
-            _stage = "";
 
             Label tip = new Label();
             tip.Text = "可随时取消；结果会先预览，确认后才写入。";
@@ -124,6 +123,7 @@ namespace ExcleHelper
 
         private AiPreview(string title, string text, bool withApply)
         {
+            Text = "EXCLE助手 · " + title;
             HeadTitle = title;
             HeadSubtitle = "AI 结果 · 确认后才会写入表格";
             HeadGlyph = "✦";
@@ -214,6 +214,7 @@ namespace ExcleHelper
 
         private AiSettingsForm()
         {
+            Text = "EXCLE助手 · AI 设置";
             HeadTitle = "AI 设置";
             HeadSubtitle = "供应商 · 密钥（DPAPI 加密保存）· 上下文与隐私";
             HeadGlyph = "✦";
@@ -261,7 +262,9 @@ namespace ExcleHelper
             _state.SetBounds(20, 430, 400, 22);
             _state.ForeColor = UiKit.Muted;
             _state.Font = UiKit.FontOf(8.5f, FontStyle.Regular);
-            _state.Text = AiSecret.Has ? "已保存 API Key（DPAPI 加密，仅本机可解）" : "尚未保存 API Key";
+            _state.Text = AiSecret.Has
+                ? "已保存 API Key（DPAPI 加密，仅本机可解）"
+                : (c.IsLocal ? "本地模型（无需 API Key）" : "尚未保存 API Key");
             Controls.Add(_state);
 
             FlatButton test = new FlatButton("测试连接", FlatButton.Kind.Ghost);
@@ -390,13 +393,10 @@ namespace ExcleHelper
             AiConfig c = Collect();
             string key = _key.Inner.Text.Trim();
             _state.Text = "正在测试连接…";
-            string text, err;
+            string err;
             List<AiMessage> msgs = AiTasks.PingTask();
-            bool ok = AiRunner.Run("测试 AI 连接", delegate(Func<bool> cancelled)
-            {
-                return AiHttp.Chat(c, key, msgs, null, cancelled, out err);
-            }, out text, out err);
-            _state.Text = ok && !string.IsNullOrEmpty(text)
+            string text = AiExtOps.Call(c, key, msgs, "测试 AI 连接", true, out err);
+            _state.Text = !string.IsNullOrEmpty(text)
                 ? "连接成功，模型返回：" + (text.Length > 60 ? text.Substring(0, 60) : text)
                 : "连接失败：" + (err ?? "无响应");
         }

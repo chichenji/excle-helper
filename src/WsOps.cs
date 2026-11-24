@@ -115,12 +115,16 @@ namespace ExcleHelper
             int idx;
             if (!int.TryParse(p, out idx)) { Xl.Bad("请输入整数。"); return true; }
             int n = (int)wb.Worksheets.Count;
+            if (n <= 1) { Xl.Say("当前只有一张工作表，无需移动。"); return true; }
             if (idx < 1) idx = 1;
             if (idx > n) idx = n;
+            int curIdx = 1;
+            try { curIdx = (int)cur.Index; } catch { }
+            if (idx == curIdx) { Xl.Say("「" + (string)cur.Name + "」已在第 " + idx + " 位。"); return true; }
             Xl.Turn(true);
             try
             {
-                if (idx == 1) cur.Move(wb.Worksheets[2]);
+                if (idx < curIdx) cur.Move(wb.Worksheets[idx]);
                 else cur.Move(Type.Missing, wb.Worksheets[idx]);
             }
             finally { Xl.Turn(false); }
@@ -279,18 +283,31 @@ namespace ExcleHelper
         {
             if (NoBook()) return true;
             dynamic wb = Xl.Book;
-            string cur = "";
-            try { cur = Path.GetFileNameWithoutExtension((string)wb.FullName); } catch { }
+            string cur = "", folder = "", ext = ".xlsx";
+            try
+            {
+                string full = (string)wb.FullName;
+                cur = Path.GetFileNameWithoutExtension(full);
+                folder = (string)wb.Path;
+                string e = Path.GetExtension(full);
+                if (!string.IsNullOrEmpty(e)) ext = e;
+            }
+            catch { }
+            if (string.IsNullOrEmpty(folder))
+            {
+                folder = PickFolder("工作簿尚未保存，请选择保存目录");
+                if (folder == null) return true;
+            }
             string name = Ask.One("重命名本簿", "新的文件名（不含扩展名）", cur);
             if (name == null || name.Trim().Length == 0) return true;
             try
             {
-                string folder = Path.GetDirectoryName((string)wb.FullName);
-                string ext = Path.GetExtension((string)wb.FullName);
-                if (ext.Length == 0) ext = ".xlsx";
                 string target = Path.Combine(folder, name.Trim() + ext);
                 if (File.Exists(target)) { Xl.Bad("目标文件已存在：" + target); return true; }
-                wb.SaveAs(target);
+                if (string.Equals(ext, ".xlsx", StringComparison.OrdinalIgnoreCase))
+                    Xl.SaveWorkbookAsXlsx(wb, target);
+                else
+                    wb.SaveAs(target);
             }
             catch (Exception ex) { Xl.Bad("重命名失败：" + ex.Message); return true; }
             Xl.Say("已保存为新文件名。");
@@ -301,8 +318,17 @@ namespace ExcleHelper
         {
             string folder = PickFolder("选择要重命名的文件所在文件夹");
             if (folder == null) return true;
-            string[] files = Directory.GetFiles(folder, "*.xls*");
-            if (files.Length == 0) { Xl.Bad("该文件夹下没有 Excel 文件。"); return true; }
+            List<string> list = new List<string>();
+            foreach (string f in Directory.GetFiles(folder))
+            {
+                string fn = Path.GetFileName(f);
+                if (fn.StartsWith("~$", StringComparison.Ordinal)) continue;
+                string ext = Path.GetExtension(f).ToLowerInvariant();
+                if (ext == ".xlsx" || ext == ".xlsm" || ext == ".xls" || ext == ".xlsb" || ext == ".et")
+                    list.Add(f);
+            }
+            string[] files = list.ToArray();
+            if (files.Length == 0) { Xl.Bad("该文件夹下没有 Excel / WPS 表格文件。"); return true; }
             string[] p = Ask.Show("规则重命名文件",
                 new string[] { "新前缀（可留空）", "序号起始", "保留原名(1=是)" },
                 new string[] { "", "1", "1" });

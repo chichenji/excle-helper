@@ -257,6 +257,7 @@ namespace ExcleHelper
             List<string> keys = new List<string>();
             Dictionary<string, double> sums = new Dictionary<string, double>(StringComparer.Ordinal);
             Dictionary<string, int> counts = new Dictionary<string, int>(StringComparer.Ordinal);
+            Dictionary<string, int> numCounts = new Dictionary<string, int>(StringComparer.Ordinal);
             Dictionary<string, HashSet<string>> uniq = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
             for (int i = 1; i < rows; i++)
             {
@@ -265,12 +266,16 @@ namespace ExcleHelper
                 string key = kb.ToString();
                 if (!sums.ContainsKey(key))
                 {
-                    sums[key] = 0; counts[key] = 0;
+                    sums[key] = 0; counts[key] = 0; numCounts[key] = 0;
                     uniq[key] = new HashSet<string>(StringComparer.Ordinal);
                     keys.Add(key);
                 }
                 counts[key]++;
-                if (Xl.IsNumber(a[i, valCol - 1])) sums[key] += Xl.D(a[i, valCol - 1]);
+                if (Xl.IsNumber(a[i, valCol - 1]))
+                {
+                    sums[key] += Xl.D(a[i, valCol - 1]);
+                    numCounts[key]++;
+                }
                 uniq[key].Add(Xl.S(a[i, valCol - 1]));
             }
 
@@ -287,7 +292,7 @@ namespace ExcleHelper
                 outv[i + 1, keyCols.Count] =
                     mode == 2 ? (object)counts[key] :
                     mode == 3 ? (object)uniq[key].Count :
-                    mode == 4 ? (counts[key] == 0 ? 0d : sums[key] / counts[key]) :
+                    mode == 4 ? (numCounts[key] == 0 ? 0d : sums[key] / numCounts[key]) :
                                 (object)sums[key];
                 outv[i + 1, keyCols.Count + 1] = counts[key];
             }

@@ -238,12 +238,10 @@ namespace ExcleHelper
             for (int i = 0; i < orr; i++)
                 for (int j = 0; j < occ; j++)
                 {
-                    string s = Xl.S(a[i, j]).Trim();
+                    string s = Xl.S(b[i, j]).Trim();
                     if (s.Length > 0) pool.Add(s);
                 }
             object[,] outv = new object[rows, 2];
-            outv[0, 0] = "是否重复";
-            outv[0, 1] = "说明";
             int hit = 0;
             for (int i = 0; i < rows; i++)
             {
@@ -258,13 +256,17 @@ namespace ExcleHelper
             try
             {
                 TextOps.WriteBlock(r, 0, cols, outv);
-                dynamic ws = r.Worksheet;
-                int firstRow = (int)r.Row;
-                dynamic c1 = ws.Cells[firstRow, (int)r.Column + cols];
-                dynamic c2 = ws.Cells[firstRow + rows - 1, (int)r.Column + cols];
-                ws.Range(c1, c2).FormatConditions.Delete();
-                dynamic fc = ws.Range(c1, c2).FormatConditions.Add(1, 3, "=\"重复\"");
-                fc.Interior.Color = 0xC1C1FF;
+                try
+                {
+                    dynamic ws = r.Worksheet;
+                    int firstRow = (int)r.Row;
+                    dynamic c1 = ws.Cells[firstRow, (int)r.Column + cols];
+                    dynamic c2 = ws.Cells[firstRow + rows - 1, (int)r.Column + cols];
+                    ws.Range(c1, c2).FormatConditions.Delete();
+                    dynamic fc = ws.Range(c1, c2).FormatConditions.Add(1, 3, "=\"重复\"");
+                    fc.Interior.Color = 0xC1C1FF;
+                }
+                catch { }
             }
             finally { Xl.Turn(false); }
             Xl.Say(Xl.Fmt("对比完成：{n} 个键值在另一区域中重复（写右侧并标色）。", hit));
@@ -277,7 +279,8 @@ namespace ExcleHelper
         {
             try
             {
-                dynamic c = Xl.Act;
+                dynamic c = Xl.ActiveCell;
+                if (c == null) return -1;
                 object v = c.Interior.Color;
                 if (v == null) return -1;
                 return Convert.ToInt32(v, CultureInfo.InvariantCulture);
@@ -505,13 +508,14 @@ namespace ExcleHelper
                 for (int j = 0; j < cols; j++)
                 {
                     object v = a[i, j];
+                    string errCode;
+                    if (Xl.IsErrorValue(v, out errCode)) { errs++; continue; }
                     string s = Xl.S(v);
                     if (v == null || s.Length == 0) { blanks++; continue; }
                     if (s.Trim().Length == 0) { blanks++; continue; }
                     if (s != s.Trim()) spaces++;
-                    if (s.IndexOf("#", StringComparison.Ordinal) == 0 && s.Length <= 8) errs++;
                     if (s.Length > 100) longText++;
-                    if (!Xl.IsNumber(v) && Regex.IsMatch(s, @"^-?\d+(\.\d+)?$")) numAsText++;
+                    if (v is string && Regex.IsMatch(s.Trim(), @"^-?\d+(\.\d+)?$")) numAsText++;
                 }
             Dictionary<string, int> freq = new Dictionary<string, int>(StringComparer.Ordinal);
             for (int i = 0; i < rows; i++)
@@ -525,7 +529,7 @@ namespace ExcleHelper
             }
             foreach (KeyValuePair<string, int> kv in freq) if (kv.Value > 1) dupCells += kv.Value;
 
-            object[,] outv = new object[9, 3];
+            object[,] outv = new object[9, 2];
             string[] names = { "总行数", "总列数", "空单元格", "首尾空格", "疑似错误值", "重复行涉及行数", "超长文本(>100)", "数字存成文本", "结论" };
             object[] vals =
             {
@@ -547,8 +551,6 @@ namespace ExcleHelper
             object[,] a = Xl.Vals(r, out rows, out cols);
             if (cols != 1) { Xl.Bad("请只选择一列作为分组依据。"); return true; }
             object[,] outv = new object[rows, 2];
-            outv[0, 0] = "组内序号";
-            outv[0, 1] = "组号";
             int group = 0;
             string prev = null;
             int seq = 0;

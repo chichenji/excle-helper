@@ -253,7 +253,7 @@ namespace ExcleHelper
                 foreach (string name in added)
                 {
                     if (renameLikely) break;
-                    try { wb.Worksheets[name].Delete(); } catch { }
+                    try { Xl.DeleteSheetSilent(wb.Worksheets[name]); } catch { }
                 }
 
                 // 2) 单元格内容与格式

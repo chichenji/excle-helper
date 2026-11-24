@@ -204,9 +204,14 @@ namespace ExcleHelper
             DayOfWeek dow = d.DayOfWeek;
             int day = (dow == DayOfWeek.Sunday) ? 7 : (int)dow;
             DateTime thursday = d.AddDays(4 - day);
-            DateTime firstThursday = new DateTime(thursday.Year, 1, 1);
-            int offset = ((int)firstThursday.DayOfWeek + 6) % 7;
-            return 1 + (thursday.DayOfYear - 1 - offset + 7) / 7;
+            return 1 + (thursday.DayOfYear - 1) / 7;
+        }
+
+        private static int ISOWeekYear(DateTime d)
+        {
+            DayOfWeek dow = d.DayOfWeek;
+            int day = (dow == DayOfWeek.Sunday) ? 7 : (int)dow;
+            return d.AddDays(4 - day).Year;
         }
 
         // ---------------- 5. 合并 ----------------
@@ -529,14 +534,22 @@ namespace ExcleHelper
                 else
                 {
                     string s = Xl.S(a[i, 0]).Trim();
-                    Match m = Regex.Match(s, @"(\d{4})\D+(\d{1,2})\D+(\d{1,2})");
+                    bool isLeap = s.IndexOf('闰') >= 0;
+                    Match m = Regex.Match(s, @"(\d{4})\D+?(\d{1,2})\D+?(\d{1,2})");
                     if (!m.Success) continue;
                     int y = int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture);
                     int mo = int.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture);
                     int dd = int.Parse(m.Groups[3].Value, CultureInfo.InvariantCulture);
                     try
                     {
-                        DateTime g = Lunar.ToDateTime(y, mo, dd, 0, 0, 0, 0);
+                        int leap = Lunar.GetLeapMonth(y);
+                        int calMo = mo;
+                        if (leap > 0)
+                        {
+                            if (isLeap && mo == leap - 1) calMo = leap;
+                            else if (!isLeap && mo >= leap) calMo = mo + 1;
+                        }
+                        DateTime g = Lunar.ToDateTime(y, calMo, dd, 0, 0, 0, 0);
                         outv[i, 0] = g.ToOADate();
                         ok++;
                     }
@@ -550,8 +563,9 @@ namespace ExcleHelper
                 TextOps.WriteBlock(r, 0, 1, outv);
                 if (!toLunar)
                 {
-                    dynamic tgt = r.Worksheet.Cells[(int)r.Row, (int)r.Column + 1];
-                    tgt.NumberFormat = "yyyy-mm-dd";
+                    dynamic tgt1 = r.Worksheet.Cells[(int)r.Row, (int)r.Column + 1];
+                    dynamic tgt2 = r.Worksheet.Cells[(int)r.Row + rows - 1, (int)r.Column + 1];
+                    r.Worksheet.Range(tgt1, tgt2).NumberFormat = "yyyy-mm-dd";
                 }
             }
             finally { Xl.Turn(false); }
@@ -594,7 +608,7 @@ namespace ExcleHelper
                 string k;
                 if (mode == 1) k = d.Year.ToString(CultureInfo.InvariantCulture);
                 else if (mode == 3) k = d.Year + "-Q" + ((d.Month - 1) / 3 + 1);
-                else if (mode == 4) k = d.Year + "-W" + ISOWeek(d).ToString("00", CultureInfo.InvariantCulture);
+                else if (mode == 4) k = ISOWeekYear(d) + "-W" + ISOWeek(d).ToString("00", CultureInfo.InvariantCulture);
                 else k = d.ToString("yyyy-MM", CultureInfo.InvariantCulture);
                 if (!counts.ContainsKey(k)) { counts[k] = 0; sums[k] = 0; keys.Add(k); }
                 counts[k] = counts[k] + 1;
@@ -641,11 +655,14 @@ namespace ExcleHelper
             Random rnd = new Random(Guid.NewGuid().GetHashCode());
             object[,] outv = new object[rows, cols];
             double span = (d2 - d1).TotalSeconds;
+            int daySpan = (d2.Date - d1.Date).Days + 1;
             for (int i = 0; i < rows; i++)
                 for (int j = 0; j < cols; j++)
-                    outv[i, j] = d1.AddSeconds(rnd.NextDouble() * span).ToOADate();
+                    outv[i, j] = withTime
+                        ? d1.AddSeconds(rnd.NextDouble() * span).ToOADate()
+                        : d1.Date.AddDays(rnd.Next(daySpan)).ToOADate();
             Xl.Turn(true);
-            try { Xl.WriteSkipFormula(r, outv); }
+            try { WriteDates(r, outv, withTime ? "yyyy-mm-dd hh:mm:ss" : "yyyy-mm-dd"); }
             finally { Xl.Turn(false); }
             Xl.Say(Xl.Fmt("已生成 {n} 个随机日期。", rows * cols));
             return true;

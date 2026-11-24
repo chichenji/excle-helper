@@ -43,13 +43,18 @@ namespace ExcleHelper
 
         internal static string Call(AiConfig cfg, string key, List<AiMessage> msgs, string title, out string err)
         {
+            return Call(cfg, key, msgs, title, true, out err);
+        }
+
+        internal static string Call(AiConfig cfg, string key, List<AiMessage> msgs, string title, bool expectJson, out string err)
+        {
             string text;
             string runnerErr;
             string inner = null;
             AiRunner.Run(title, delegate(Func<bool> c)
             {
                 string e2;
-                string r = AiHttp.Chat(cfg, key, msgs, null, c, out e2);
+                string r = AiHttp.Chat(cfg, key, msgs, null, c, expectJson, out e2);
                 inner = e2;
                 return r;
             }, out text, out runnerErr);
@@ -59,7 +64,7 @@ namespace ExcleHelper
 
         internal static bool Ready(AiConfig cfg, string key)
         {
-            if (key.Length > 0) return true;
+            if ((key != null && key.Length > 0) || (cfg != null && cfg.IsLocal)) return true;
             Xl.Bad("还没有配置 API Key，请先执行「AI 设置」。");
             return false;
         }
@@ -330,7 +335,7 @@ namespace ExcleHelper
             msgs.Add(new AiMessage("user", digest));
 
             string err;
-            string text = Call(cfg, key, msgs, "AI 正在分析", out err);
+            string text = Call(cfg, key, msgs, "AI 正在分析", false, out err);
             if (text == null) { Xl.Bad("请求失败：" + (err ?? "未知错误")); return true; }
             AiPreview.Show("AI 数据洞察（" + addr + "）", text, false);
             return true;
@@ -536,23 +541,32 @@ namespace ExcleHelper
             {
                 dynamic ws = Xl.Act;
                 dynamic target = ws.Range["H2"];
-                dynamic shape = ws.Shapes.AddChart2(-1, id, (double)target.Left, (double)target.Top, 420, 260);
-                dynamic chart = shape.Chart;
-                // 数据源：分类列 + 数值列
+                dynamic chart = Xl.AddChartCompat(ws, id, (double)target.Left, (double)target.Top, 420, 260);
+                // 数据源：分类列 + 数值列（不相邻时优先用 Union，避免把中间列一并画入）
                 dynamic data;
-                if (catCol >= 0)
+                int r0 = (int)r.Row, c0 = (int)r.Column;
+                dynamic valRange = ws.Range[ws.Cells[r0, c0 + valCol], ws.Cells[r0 + cr - 1, c0 + valCol]];
+                if (catCol >= 0 && catCol != valCol)
                 {
-                    dynamic c1 = ws.Cells[(int)r.Row, (int)r.Column + catCol];
-                    dynamic c2 = ws.Cells[(int)r.Row, (int)r.Column + valCol];
-                    data = ws.Range[c1, ws.Cells[(int)r.Row + cr - 1, (int)r.Column + valCol]];
-                    if (Math.Abs(catCol - valCol) > 1)
-                        data = ws.Range[ws.Cells[(int)r.Row, (int)r.Column + Math.Min(catCol, valCol)],
-                                       ws.Cells[(int)r.Row + cr - 1, (int)r.Column + Math.Max(catCol, valCol)]];
+                    dynamic catRange = ws.Range[ws.Cells[r0, c0 + catCol], ws.Cells[r0 + cr - 1, c0 + catCol]];
+                    if (Math.Abs(catCol - valCol) == 1)
+                    {
+                        data = ws.Range[ws.Cells[r0, c0 + Math.Min(catCol, valCol)],
+                                        ws.Cells[r0 + cr - 1, c0 + Math.Max(catCol, valCol)]];
+                    }
+                    else
+                    {
+                        try { data = Xl.App.Union(catRange, valRange); }
+                        catch
+                        {
+                            data = ws.Range[ws.Cells[r0, c0 + Math.Min(catCol, valCol)],
+                                            ws.Cells[r0 + cr - 1, c0 + Math.Max(catCol, valCol)]];
+                        }
+                    }
                 }
                 else
                 {
-                    data = ws.Range[ws.Cells[(int)r.Row, (int)r.Column + valCol],
-                                    ws.Cells[(int)r.Row + cr - 1, (int)r.Column + valCol]];
+                    data = valRange;
                 }
                 chart.SetSourceData(data);
                 chart.HasTitle = true;
@@ -637,7 +651,7 @@ namespace ExcleHelper
 
             List<AiMessage> msgs = AiTasks.ChatTask(q, digest, null);
             string err;
-            string text = Call(cfg, key, msgs, "AI 正在回答", out err);
+            string text = Call(cfg, key, msgs, "AI 正在回答", false, out err);
             if (text == null) { Xl.Bad("请求失败：" + (err ?? "未知错误")); return true; }
             AiPreview.Show("AI 回答", "问题：" + q + "\n\n" + text, false);
             return true;

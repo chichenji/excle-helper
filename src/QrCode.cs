@@ -276,16 +276,10 @@ namespace ExcleHelper
         {
             int size = m.GetLength(0);
 
-            // 定位图形 + 分隔符
-            for (int i = 0; i < 9; i++)
-            {
-                for (int j = 0; j < 9; j++)
-                {
-                    SetFunc(m, f, j, i, InFinder(j, i));
-                    SetFunc(m, f, size - 9 + j, i, InFinder(size - 9 + j, i));
-                    SetFunc(m, f, j, size - 9 + i, InFinder(j, size - 9 + i));
-                }
-            }
+            // 定位图形（7×7）+ 周围 1 模块白色分隔符
+            DrawFinder(m, f, 0, 0);
+            DrawFinder(m, f, size - 7, 0);
+            DrawFinder(m, f, 0, size - 7);
 
             // 定时图形
             for (int i = 8; i < size - 8; i++)
@@ -318,9 +312,6 @@ namespace ExcleHelper
                     }
             }
 
-            // 暗模块
-            SetFunc(m, f, 8, size - 8, true);
-
             // 版本信息（v>=7）
             if (version >= 7)
             {
@@ -351,15 +342,27 @@ namespace ExcleHelper
                 SetFunc(m, f, size - 1 - i, 8, false);
                 SetFunc(m, f, 8, size - 1 - i, false);
             }
+
+            // 暗模块（固定位于 x=8, y=4*version+9 = size-8，放在预留之后以免被清空）
+            SetFunc(m, f, 8, size - 8, true);
         }
 
-        private static bool InFinder(int x, int y)
+        private static void DrawFinder(bool[,] m, bool[,] f, int ox, int oy)
         {
-            int mx = x % 9, my = y % 9;
-            if (mx > 6 || my > 6) return false;   // 分隔符留白
-            int dx = Math.Min(mx, 6 - mx), dy = Math.Min(my, 6 - my);
-            int d = Math.Min(dx, dy);
-            return d != 1;                        // 外框(0) 与中心(2,3) 为黑
+            for (int dy = -1; dy <= 7; dy++)
+            {
+                for (int dx = -1; dx <= 7; dx++)
+                {
+                    bool sep = (dx < 0 || dx > 6 || dy < 0 || dy > 6);
+                    bool dark = false;
+                    if (!sep)
+                    {
+                        int d = Math.Min(Math.Min(dx, 6 - dx), Math.Min(dy, 6 - dy));
+                        dark = (d != 1);   // 外框(0)与中心 3×3(2,3) 为黑，中间环(1)为白
+                    }
+                    SetFunc(m, f, ox + dx, oy + dy, dark);
+                }
+            }
         }
 
         private static void SetFunc(bool[,] m, bool[,] f, int x, int y, bool dark)
@@ -442,7 +445,7 @@ namespace ExcleHelper
             // 右上 + 左下
             for (int i = 0; i < 8; i++) m[size - 1 - i, 8] = ((bits >> i) & 1) != 0;
             for (int i = 8; i < 15; i++) m[8, size - 15 + i] = ((bits >> i) & 1) != 0;
-            m[size - 8, 8] = true;                             // 暗模块
+            m[8, size - 8] = true;                             // 暗模块（列 8，行 size-8）
         }
 
         private static long Penalty(bool[,] m)

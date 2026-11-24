@@ -25,8 +25,14 @@ namespace ExcleHelper
         {
             dynamic r = Xl.SelRange("要设置行高的区域");
             if (r == null) return true;
-            double h;
-            if (!Ask.Dbl("统一行高", "行高(磅，留空自动)", "18", out h)) return true;
+            string s = Ask.One("统一行高", "行高(磅，留空或填 0 自动调整)", "18");
+            if (s == null) return true;
+            double h = 0;
+            if (s.Trim().Length > 0 && !double.TryParse(s.Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out h))
+            {
+                Xl.Bad("请输入数字。");
+                return true;
+            }
             Xl.Turn(true);
             try
             {
@@ -42,8 +48,14 @@ namespace ExcleHelper
         {
             dynamic r = Xl.SelRange("要设置列宽的区域");
             if (r == null) return true;
-            double w;
-            if (!Ask.Dbl("统一列宽", "列宽(字符数，留空自动)", "12", out w)) return true;
+            string s = Ask.One("统一列宽", "列宽(字符数，留空或填 0 自动调整)", "12");
+            if (s == null) return true;
+            double w = 0;
+            if (s.Trim().Length > 0 && !double.TryParse(s.Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out w))
+            {
+                Xl.Bad("请输入数字。");
+                return true;
+            }
             Xl.Turn(true);
             try
             {
@@ -75,18 +87,7 @@ namespace ExcleHelper
             dynamic r = Xl.SelRange("要加边框的区域");
             if (r == null) return true;
             Xl.Turn(true);
-            try
-            {
-                dynamic b = r.Borders;
-                // 7..12 = 左上右下 + 内部横竖
-                for (int i = 7; i <= 12; i++)
-                {
-                    dynamic edge = b[i];
-                    edge.LineStyle = 1;      // xlContinuous
-                    edge.Weight = 2;         // xlThin
-                    edge.Color = Bgr(180, 190, 200);
-                }
-            }
+            try { Xl.SetThinBorders(r, Bgr(180, 190, 200)); }
             finally { Xl.Turn(false); }
             Xl.Say("已为选区加上细边框。");
             return true;
@@ -137,13 +138,7 @@ namespace ExcleHelper
                 target.HorizontalAlignment = -4108;   // xlCenter
                 target.VerticalAlignment = -4108;
                 target.RowHeight = 22;
-                dynamic b = target.Borders;
-                for (int i = 7; i <= 12; i++)
-                {
-                    b[i].LineStyle = 1;
-                    b[i].Weight = 2;
-                    b[i].Color = Bgr(37, 99, 235);
-                }
+                Xl.SetThinBorders(target, Bgr(37, 99, 235));
             }
             finally { Xl.Turn(false); }
             Xl.Say("表头样式已应用（深蓝底 / 白字 / 加粗 / 居中 / 边框）。");

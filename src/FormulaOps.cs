@@ -190,7 +190,8 @@ namespace ExcleHelper
                         try { if ((bool)cell.HasFormula) f = (string)cell.Formula; } catch { }
                         if (string.IsNullOrEmpty(f)) continue;
                         if (f.IndexOf(p[0], StringComparison.OrdinalIgnoreCase) < 0) continue;
-                        string nf = f.Replace(p[0], p[1]);
+                        string nf = Regex.Replace(f, Regex.Escape(p[0]), p[1].Replace("$", "$$"), RegexOptions.IgnoreCase);
+                        if (nf == f) continue;
                         try { cell.Formula = nf; n++; }
                         catch { }
                     }

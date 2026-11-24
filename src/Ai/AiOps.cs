@@ -32,12 +32,11 @@ namespace ExcleHelper
         {
             AiConfig cfg = AiConfig.Load();
             string key = ApiKey();
-            if (key.Length == 0) { Xl.Bad("还没有配置 API Key，请先执行「AI 设置」。"); return true; }
-            string text, err;
+            if (!AiExtOps.Ready(cfg, key)) return true;
+            string err;
             List<AiMessage> msgs = AiTasks.PingTask();
-            bool ok = AiRunner.Run("测试 AI 连接", delegate(Func<bool> c) { return AiHttp.Chat(cfg, key, msgs, null, c, out err); },
-                                   out text, out err);
-            if (ok) Xl.Say("连接正常。\n模型：" + cfg.Model + "\n返回：" + AiHttp.Sanitize(text));
+            string text = AiExtOps.Call(cfg, key, msgs, "测试 AI 连接", true, out err);
+            if (text != null) Xl.Say("连接正常。\n模型：" + cfg.Model + "\n返回：" + AiHttp.Sanitize(text));
             else Xl.Bad("连接失败：" + (err ?? "无响应"));
             return true;
         }
@@ -54,7 +53,7 @@ namespace ExcleHelper
         {
             AiConfig cfg = AiConfig.Load();
             string key = ApiKey();
-            if (key.Length == 0) { Xl.Bad("还没有配置 API Key，请先执行「AI 设置」。"); return true; }
+            if (!AiExtOps.Ready(cfg, key)) return true;
 
             dynamic r = Xl.SelRange("要分析的数据区域（建议包含表头）");
             if (r == null) return true;
@@ -71,12 +70,9 @@ namespace ExcleHelper
             string suggest = AiTasks.SuggestTarget(r);
             List<AiMessage> msgs = AiTasks.FormulaTask(req.Trim(), digest);
 
-            string text, err;
-            bool ok = AiRunner.Run("AI 正在生成公式", delegate(Func<bool> c)
-            {
-                return AiHttp.Chat(cfg, key, msgs, null, c, out err);
-            }, out text, out err);
-            if (!ok) { Xl.Bad("请求失败：" + (err ?? "未知错误")); return true; }
+            string err;
+            string text = AiExtOps.Call(cfg, key, msgs, "AI 正在生成公式", true, out err);
+            if (text == null) { Xl.Bad("请求失败：" + (err ?? "未知错误")); return true; }
 
             Dictionary<string, object> res = AiTasks.ParseResult(text, out err);
             if (res == null) { Xl.Bad(err); return true; }
@@ -125,17 +121,16 @@ namespace ExcleHelper
         {
             AiConfig cfg = AiConfig.Load();
             string key = ApiKey();
-            if (key.Length == 0) { Xl.Bad("还没有配置 API Key，请先执行「AI 设置」。"); return true; }
+            if (!AiExtOps.Ready(cfg, key)) return true;
 
             string f = CurrentFormula();
             if (f == null) { Xl.Bad("请先选中一个包含公式的单元格。"); return true; }
 
             string digest = SmallDigest(cfg);
             List<AiMessage> msgs = AiTasks.ExplainTask(f, digest);
-            string text, err;
-            bool ok = AiRunner.Run("AI 正在解释公式", delegate(Func<bool> c) { return AiHttp.Chat(cfg, key, msgs, null, c, out err); },
-                                   out text, out err);
-            if (!ok) { Xl.Bad("请求失败：" + (err ?? "未知错误")); return true; }
+            string err;
+            string text = AiExtOps.Call(cfg, key, msgs, "AI 正在解释公式", true, out err);
+            if (text == null) { Xl.Bad("请求失败：" + (err ?? "未知错误")); return true; }
 
             Dictionary<string, object> res = AiTasks.ParseResult(text, out err);
             if (res == null) { Xl.Bad(err); return true; }
@@ -165,17 +160,16 @@ namespace ExcleHelper
         {
             AiConfig cfg = AiConfig.Load();
             string key = ApiKey();
-            if (key.Length == 0) { Xl.Bad("还没有配置 API Key，请先执行「AI 设置」。"); return true; }
+            if (!AiExtOps.Ready(cfg, key)) return true;
 
             string f = CurrentFormula();
             if (f == null) { Xl.Bad("请先选中一个包含公式的单元格。"); return true; }
 
             string digest = SmallDigest(cfg);
             List<AiMessage> msgs = AiTasks.FixTask(f, digest);
-            string text, err;
-            bool ok = AiRunner.Run("AI 正在检查公式", delegate(Func<bool> c) { return AiHttp.Chat(cfg, key, msgs, null, c, out err); },
-                                   out text, out err);
-            if (!ok) { Xl.Bad("请求失败：" + (err ?? "未知错误")); return true; }
+            string err;
+            string text = AiExtOps.Call(cfg, key, msgs, "AI 正在检查公式", true, out err);
+            if (text == null) { Xl.Bad("请求失败：" + (err ?? "未知错误")); return true; }
 
             Dictionary<string, object> res = AiTasks.ParseResult(text, out err);
             if (res == null) { Xl.Bad(err); return true; }

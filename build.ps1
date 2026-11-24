@@ -1,4 +1,4 @@
-# Build ExcleHelper.dll (EXCLE助手) with the in-box .NET Framework 4.8 compiler.
+﻿# Build ExcleHelper.dll (EXCLE助手) with the in-box .NET Framework 4.8 compiler.
 $ErrorActionPreference = 'Stop'
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $src  = Join-Path $here 'src'
@@ -29,7 +29,7 @@ $refs = @(
 )
 
 $cscArgs = @(
-  '/target:library', '/platform:anycpu', '/optimize+', '/nologo', '/warn:2',
+  '/target:library', '/platform:anycpu', '/optimize+', '/nologo', '/warn:4',
   "/out:$outDll",
   "/res:$src\ribbon.xml,ExcleHelper.ribbon.xml"
 ) + $refs + $files

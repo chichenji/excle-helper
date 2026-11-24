@@ -15,9 +15,10 @@ namespace ExcleHelper
         private static bool About()
         {
             string msg =
-                "EXCLE助手  " + "1.0.0" + "\r\n" +
+                "EXCLE助手  1.1.0\r\n" +
                 "──────────────────────────\r\n" +
-                "一个独立实现的 Excel 表格效率插件。\r\n" +
+                "一个独立实现的 Excel / WPS 表格效率插件。\r\n" +
+                "• 宿主支持：Microsoft Excel (32/64位) 与 WPS 表格 (32/64位)\r\n" +
                 "• 注册功能数：" + Ops.Count + "\r\n" +
                 "• 架构：单 DLL 经典 COM 加载项 + 声明式 Ribbon + 操作注册表\r\n" +
                 "• 依赖：无（不需要 VSTO / PIA / Aspose / NPOI / 联网）\r\n" +
@@ -34,11 +35,11 @@ namespace ExcleHelper
             string msg =
                 "使用方法\r\n" +
                 "──────────────────────────\r\n" +
-                "1) 先在 Excel 中选中要处理的数据区域。\r\n" +
+                "1) 先在 Excel / WPS 表格中选中要处理的数据区域。\r\n" +
                 "2) 在「EXCLE助手」选项卡里点对应按钮。\r\n" +
                 "3) 需要参数的按钮会弹出一个小对话框，填完点确定。\r\n" +
                 "4) 需要框选区域时，会弹出一个「区域选择」输入框，\r\n" +
-                "   用鼠标直接拖选即可（和 Excel 原生选择一致）。\r\n" +
+                "   用鼠标直接拖选即可（与宿主原生选择一致）。\r\n" +
                 "\r\n" +
                 "结果去向\r\n" +
                 "• 文本/数值类：就地修改原选区（跳过公式）。\r\n" +

@@ -1,12 +1,12 @@
 # EXCLE助手
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
-![Platform: Windows](https://img.shields.io/badge/Platform-Windows%20%7C%20Excel-blue.svg)
+![Platform: Windows](https://img.shields.io/badge/Platform-Windows%20%7C%20Excel%20%26%20WPS-blue.svg)
 ![Dependencies: none](https://img.shields.io/badge/Dependencies-none-brightgreen.svg)
 
-> 独立实现的 Excel 效率插件 · **320 个功能** · 单 DLL · 零第三方依赖 · 纯本地运算
+> 独立实现的 Excel / WPS 表格效率插件 · **320 个功能** · 单 DLL · 零第三方依赖 · 纯本地运算
 
-把常用表格操作集中起来的 Excel 加载项：文本清洗、数值与日期、行列编辑、格式美化、汇总拆分、
+把常用表格操作集中起来的 Excel / WPS 表格（ET）双宿主 COM 加载项：文本清洗、数值与日期、行列编辑、格式美化、汇总拆分、
 多表关联、数据质量检查、工作簿治理，外加一套可用的 AI 助手。
 **全部功能免费 —— 没有会员、账户、联网校验或功能门禁。**
 
@@ -14,6 +14,7 @@
 
 ## 特性
 
+- **双宿主 & 32/64 位兼容**：同时支持 **Microsoft Excel (32/64位)** 与 **WPS 表格 ET (32/64位)**，`install.ps1` 自动注册 64 位与 `WOW6432Node` 32 位 CLSID 及 WPS 加载项/白名单
 - **320 个功能**，3 个选项卡 / 14 个功能组；功能区与可搜索面板双入口
 - **单文件交付**：一个 `ExcleHelper.dll`，不需要 VSTO 运行时 / Office PIA / Aspose / 任何第三方库
 - **所有操作可回退**：每次操作前自动快照（公式、值与格式），支持撤销、重做、多步历史；AI 写入同样可回退
@@ -25,19 +26,30 @@
 
 ## 快速开始
 
+### 方式一：直接下载发布版（推荐）
+
+前往 [GitHub Releases](https://github.com/chichenji/excle-helper/releases) 下载：
+
+- **一键安装版** `ExcleHelper-Setup-v1.1.0.exe`：双击运行 → 点击「一键安装 / 更新」→ 重启 Excel / WPS 即可（无需管理员权限，自带卸载按钮）
+- **便携压缩包** `ExcleHelper-v1.1.0-win-anycpu.zip`：解压后双击 `install.bat`（卸载双击 `uninstall.bat`）
+
+### 方式二：从仓库安装或自行编译
+
 ```powershell
-# 安装（只写 HKCU，无需管理员）
+# 安装（只写 HKCU，无需管理员；同时注册 Excel 与 WPS 32/64 位）
 powershell -ExecutionPolicy Bypass -File .\install.ps1
 
-# 重启 Excel：功能区出现「EXCLE助手 / 格式与数据 / 工具与输出」三个选项卡
+# 重启 Excel 或 WPS 表格：功能区出现「EXCLE助手 / 格式与数据 / 工具与输出」三个选项卡
+# （WPS 需在「选项 → 信任中心」勾选「启用第三方 COM 加载项」）
 ```
 
 从源码构建（用系统自带的 .NET Framework 编译器，不需要 Visual Studio）：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\build.ps1       # 产出 bin\ExcleHelper.dll
-powershell -ExecutionPolicy Bypass -File .\install.ps1     # 注册到当前用户
-powershell -ExecutionPolicy Bypass -File .\uninstall.ps1   # 反注册（先导出 .reg 备份）
+powershell -ExecutionPolicy Bypass -File .\build.ps1          # 产出 bin\ExcleHelper.dll
+powershell -ExecutionPolicy Bypass -File .\build-release.ps1  # 产出安装程序 .exe 与便携 .zip
+powershell -ExecutionPolicy Bypass -File .\install.ps1        # 注册到当前用户
+powershell -ExecutionPolicy Bypass -File .\uninstall.ps1      # 反注册（先导出 .reg 备份）
 ```
 
 仓库已附带构建好的 `bin/ExcleHelper.dll`，不想编译可直接运行 `install.ps1`。

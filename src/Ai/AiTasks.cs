@@ -248,15 +248,17 @@ namespace ExcleHelper
             note = null;
             if (Xl.Book == null) { note = "没有打开的工作簿"; return false; }
             dynamic tmp = null;
+            dynamic prevSheet = null;
             try
             {
                 dynamic wb = Xl.Book;
+                try { prevSheet = Xl.Act; } catch { }
                 tmp = wb.Worksheets.Add(Type.Missing, wb.Worksheets[wb.Worksheets.Count]);
                 tmp.Cells[1, 1].Formula = formula;
                 object v = tmp.Cells[1, 1].Value2;
-                string s = Xl.S(v);
-                if (s.StartsWith("#") && s.Length <= 12)
-                    note = "公式语法正确，但试算返回 " + s + "（可能引用了不存在的名称或区域）";
+                string errCode;
+                if (Xl.IsErrorValue(v, out errCode))
+                    note = "公式语法正确，但试算返回 " + errCode + "（可能引用了不存在的名称或区域）";
                 return true;
             }
             catch (Exception ex)
@@ -266,7 +268,8 @@ namespace ExcleHelper
             }
             finally
             {
-                try { if (tmp != null) tmp.Delete(); } catch { }
+                Xl.DeleteSheetSilent(tmp);
+                if (prevSheet != null) try { prevSheet.Activate(); } catch { }
             }
         }
 

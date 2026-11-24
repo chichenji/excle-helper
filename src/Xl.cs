@@ -1,18 +1,23 @@
 using System;
+using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Text;
 using System.Windows.Forms;
 
 namespace ExcleHelper
 {
     /// <summary>
-    /// The ONLY place in the add-in that talks to Excel.
-    /// Everything goes through IDispatch (dynamic) so no Office PIA is needed
+    /// The ONLY place in the add-in that abstracts host COM differences between
+    /// Microsoft Excel and WPS Spreadsheets (ET).
+    /// Everything goes through IDispatch (dynamic) so no Office/WPS PIA is needed
     /// at build time or run time.
     /// </summary>
     internal static class Xl
     {
         internal static dynamic App;
+        internal static bool IsWps;
+        internal static string HostName = "Excel";
         internal static string LastTag = "";
 
         /// <summary>When true, notifications are captured instead of shown (scripted / headless runs).</summary>
@@ -21,12 +26,54 @@ namespace ExcleHelper
 
         internal const string Caption = "EXCLE助手";
 
+        internal static void Attach(object app)
+        {
+            App = app;
+            IsWps = DetectWps(app);
+            HostName = IsWps ? "WPS 表格" : "Excel";
+        }
+
+        internal static void Detach()
+        {
+            App = null;
+            IsWps = false;
+            HostName = "Excel";
+        }
+
+        private static bool DetectWps(object app)
+        {
+            try
+            {
+                string proc = Process.GetCurrentProcess().ProcessName ?? "";
+                if (proc.Equals("et", StringComparison.OrdinalIgnoreCase)
+                    || proc.Equals("wps", StringComparison.OrdinalIgnoreCase)
+                    || proc.Equals("wpsoffice", StringComparison.OrdinalIgnoreCase)
+                    || proc.IndexOf("kingsoft", StringComparison.OrdinalIgnoreCase) >= 0)
+                    return true;
+            }
+            catch { }
+            try
+            {
+                if (app != null)
+                {
+                    dynamic d = app;
+                    string name = Convert.ToString(d.Name, CultureInfo.InvariantCulture) ?? "";
+                    if (name.IndexOf("WPS", StringComparison.OrdinalIgnoreCase) >= 0
+                        || name.IndexOf("Kingsoft", StringComparison.OrdinalIgnoreCase) >= 0
+                        || name.Equals("ET", StringComparison.OrdinalIgnoreCase))
+                        return true;
+                }
+            }
+            catch { }
+            return false;
+        }
+
         // ================= application state =================
         internal static bool Ready()
         {
             if (App == null)
             {
-                Bad("插件尚未连接到 Excel。请重启 Excel 或在「文件-选项-加载项」中重新勾选。");
+                Bad("插件尚未连接到表格程序（Excel / WPS）。请重启或在「加载项」设置中重新勾选。");
                 return false;
             }
             return true;
@@ -47,6 +94,21 @@ namespace ExcleHelper
             get { try { return App.Selection; } catch { return null; } }
         }
 
+        internal static dynamic ActiveCell
+        {
+            get { try { return App.ActiveCell; } catch { return null; } }
+        }
+
+        /// <summary>Total cell count of a range without 32-bit overflow on whole-column/sheet selections.</summary>
+        internal static long CellCount(dynamic rng)
+        {
+            if (rng == null) return 0;
+            try { return Convert.ToInt64(rng.CountLarge, CultureInfo.InvariantCulture); }
+            catch { }
+            try { return Convert.ToInt64(rng.Count, CultureInfo.InvariantCulture); }
+            catch { return 0; }
+        }
+
         /// <summary>Selection if and only if it is a cell range.</summary>
         internal static dynamic SelRange(string what)
         {
@@ -56,7 +118,7 @@ namespace ExcleHelper
             try
             {
                 object cells = s.Cells;
-                int n = (int)s.Count;
+                long n = CellCount(s);
                 if (cells == null || n <= 0) { Bad("请先选择" + what + "。"); return null; }
             }
             catch
@@ -65,6 +127,160 @@ namespace ExcleHelper
                 return null;
             }
             return s;
+        }
+
+        // ================= alert suppression & safe COM wrappers =================
+        private sealed class AlertScope : IDisposable
+        {
+            private readonly bool _hadPrev;
+            private readonly bool _prev;
+
+            internal AlertScope()
+            {
+                try
+                {
+                    _prev = (bool)App.DisplayAlerts;
+                    _hadPrev = true;
+                }
+                catch { _hadPrev = false; _prev = true; }
+                try { App.DisplayAlerts = false; } catch { }
+            }
+
+            public void Dispose()
+            {
+                if (_hadPrev)
+                {
+                    try { App.DisplayAlerts = _prev; } catch { }
+                }
+            }
+        }
+
+        /// <summary>Temporarily suppress Excel / WPS confirmation popups and restore previous DisplayAlerts.</summary>
+        internal static IDisposable SuppressAlerts()
+        {
+            return new AlertScope();
+        }
+
+        internal static void DeleteSheetSilent(dynamic ws)
+        {
+            if (ws == null) return;
+            using (SuppressAlerts())
+            {
+                ws.Delete();
+            }
+        }
+
+        internal static void MergeSilent(dynamic rng)
+        {
+            if (rng == null) return;
+            using (SuppressAlerts())
+            {
+                rng.Merge();
+            }
+        }
+
+        /// <summary>
+        /// Save workbook as .xlsx (FileFormat=51 xlOpenXMLWorkbook) across both Excel and WPS,
+        /// suppressing overwrite prompts and handling source books that were .xls/.et/.csv.
+        /// </summary>
+        internal static void SaveWorkbookAsXlsx(dynamic wb, string path)
+        {
+            using (SuppressAlerts())
+            {
+                string ext = (Path.GetExtension(path) ?? "").ToLowerInvariant();
+                if (ext == ".xlsx")
+                {
+                    try
+                    {
+                        wb.SaveAs(path, 51);
+                        return;
+                    }
+                    catch { }
+                }
+                else if (ext == ".xlsm")
+                {
+                    try
+                    {
+                        wb.SaveAs(path, 52);
+                        return;
+                    }
+                    catch { }
+                }
+                else if (ext == ".xls")
+                {
+                    try
+                    {
+                        wb.SaveAs(path, 56);
+                        return;
+                    }
+                    catch { }
+                }
+                wb.SaveAs(path);
+            }
+        }
+
+        /// <summary>Apply thin borders safely for 1-row / 1-column / multi-cell ranges in both Excel and WPS.</summary>
+        internal static void SetThinBorders(dynamic rng, int color)
+        {
+            dynamic b = rng.Borders;
+            int rows = 1, cols = 1;
+            try { rows = (int)rng.Rows.Count; } catch { }
+            try { cols = (int)rng.Columns.Count; } catch { }
+
+            // 7=xlEdgeLeft, 8=xlEdgeTop, 9=xlEdgeBottom, 10=xlEdgeRight
+            for (int i = 7; i <= 10; i++)
+            {
+                try
+                {
+                    dynamic edge = b[i];
+                    edge.LineStyle = 1; // xlContinuous
+                    edge.Weight = 2;    // xlThin
+                    edge.Color = color;
+                }
+                catch { }
+            }
+            if (cols > 1)
+            {
+                try
+                {
+                    dynamic edge = b[11]; // xlInsideVertical
+                    edge.LineStyle = 1;
+                    edge.Weight = 2;
+                    edge.Color = color;
+                }
+                catch { }
+            }
+            if (rows > 1)
+            {
+                try
+                {
+                    dynamic edge = b[12]; // xlInsideHorizontal
+                    edge.LineStyle = 1;
+                    edge.Weight = 2;
+                    edge.Color = color;
+                }
+                catch { }
+            }
+        }
+
+        /// <summary>
+        /// Create a chart using ChartObjects().Add (compatible with both Excel 2007-365 and WPS ET),
+        /// falling back to Shapes.AddChart2 if needed. Returns the Chart COM object.
+        /// </summary>
+        internal static dynamic AddChartCompat(dynamic ws, int chartType, double left, double top, double width, double height)
+        {
+            try
+            {
+                dynamic co = ws.ChartObjects().Add(left, top, width, height);
+                dynamic ch = co.Chart;
+                try { ch.ChartType = chartType; } catch { }
+                return ch;
+            }
+            catch
+            {
+                dynamic shape = ws.Shapes.AddChart2(-1, chartType, left, top, width, height);
+                return shape.Chart;
+            }
         }
 
         // ================= messages =================
@@ -102,7 +318,7 @@ namespace ExcleHelper
                                  Type.Missing, Type.Missing, Type.Missing, 8);
             }
             catch { return null; }
-            if (r is bool) return null;
+            if (r == null || r is bool) return null;
             return r;
         }
 
@@ -118,16 +334,55 @@ namespace ExcleHelper
             }
         }
 
-        // ================= values =================
+        // ================= error cell values (COM VT_ERROR) =================
         /// <summary>
-        /// Read a range as a guaranteed 0-based 2D array.
-        /// Excel hands back SAFEARRAYs whose lower bound is 1, and marshaling may
-        /// preserve that, so the raw cast is not safe to index with a[i, j].
+        /// Detect Excel / WPS cell error values (returned by COM Value2 as negative Int32 CVErr codes,
+        /// as well as literal "#..." error text).
         /// </summary>
-        internal static object[,] Vals(dynamic rng, out int rows, out int cols)
+        internal static bool IsErrorValue(object v, out string code)
         {
-            object v = rng.Value2;
-            Array arr = v as Array;
+            code = null;
+            if (v == null || v is DBNull) return false;
+            if (v is int)
+            {
+                int iv = (int)v;
+                switch (iv)
+                {
+                    case -2146826288: code = "#NULL!"; return true;
+                    case -2146826281: code = "#DIV/0!"; return true;
+                    case -2146826273: code = "#VALUE!"; return true;
+                    case -2146826265: code = "#REF!"; return true;
+                    case -2146826259: code = "#NAME?"; return true;
+                    case -2146826252: code = "#NUM!"; return true;
+                    case -2146826246: code = "#N/A"; return true;
+                    case -2146826245: code = "#GETTING_DATA"; return true;
+                }
+                if (iv <= -2146826200 && iv >= -2146826290)
+                {
+                    code = "#ERROR!";
+                    return true;
+                }
+                return false;
+            }
+            string s = v as string;
+            if (s != null && s.Length >= 4 && s.Length <= 14 && s[0] == '#')
+            {
+                string u = s.ToUpperInvariant();
+                if (u == "#N/A" || u == "#DIV/0!" || u == "#VALUE!" || u == "#REF!"
+                    || u == "#NAME?" || u == "#NUM!" || u == "#NULL!" || u == "#SPILL!"
+                    || u == "#CALC!" || u == "#FIELD!" || u == "#GETTING_DATA")
+                {
+                    code = s;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // ================= values & formulas =================
+        private static object[,] Normalize2D(object raw, out int rows, out int cols)
+        {
+            Array arr = raw as Array;
             if (arr != null && arr.Rank == 2)
             {
                 int r0 = arr.GetLowerBound(0);
@@ -144,13 +399,33 @@ namespace ExcleHelper
             rows = 1;
             cols = 1;
             object[,] one = new object[1, 1];
-            one[0, 0] = v;
+            one[0, 0] = raw;
             return one;
+        }
+
+        /// <summary>
+        /// Read a range's Value2 as a guaranteed 0-based 2D array.
+        /// Excel/WPS hand back SAFEARRAYs whose lower bound is 1, and marshaling may
+        /// preserve that, so the raw cast is not safe to index with a[i, j].
+        /// </summary>
+        internal static object[,] Vals(dynamic rng, out int rows, out int cols)
+        {
+            return Normalize2D(rng.Value2, out rows, out cols);
+        }
+
+        /// <summary>
+        /// Read a range's Formula as a guaranteed 0-based 2D array (works for both 1-cell and multi-cell ranges).
+        /// </summary>
+        internal static object[,] Formulas(dynamic rng, out int rows, out int cols)
+        {
+            return Normalize2D(rng.Formula, out rows, out cols);
         }
 
         internal static string S(object v)
         {
             if (v == null || v is DBNull) return "";
+            string errCode;
+            if (v is int && IsErrorValue(v, out errCode)) return errCode;
             // Excel stores long digit strings as doubles; Convert.ToString would then
             // hand back "4.11111111111111E+15" and destroy identifier/card numbers.
             if (v is double || v is float || v is decimal)
@@ -166,6 +441,8 @@ namespace ExcleHelper
         internal static bool IsNumber(object v)
         {
             if (v == null || v is DBNull) return false;
+            string errCode;
+            if (v is int && IsErrorValue(v, out errCode)) return false;
             if (v is double || v is int || v is long || v is decimal || v is float || v is short) return true;
             double d;
             return double.TryParse(Convert.ToString(v, CultureInfo.InvariantCulture),
@@ -175,6 +452,8 @@ namespace ExcleHelper
         internal static double D(object v)
         {
             if (v == null || v is DBNull) return 0d;
+            string errCode;
+            if (v is int && IsErrorValue(v, out errCode)) return 0d;
             double d;
             if (double.TryParse(Convert.ToString(v, CultureInfo.InvariantCulture),
                                 NumberStyles.Any, CultureInfo.InvariantCulture, out d)) return d;
@@ -190,7 +469,7 @@ namespace ExcleHelper
 
         /// <summary>
         /// 把二维数组写回选区，但**跳过公式单元格**（避免把公式静默固化成常量）。
-        /// 无公式时走整块写入的快路径；返回实际写入的单元格数。
+        /// 同时兼容单单元格与多单元格选区；无公式时走整块写入的快路径；返回实际写入的单元格数。
         /// </summary>
         internal static int WriteSkipFormula(dynamic rng, object[,] outv)
         {
@@ -202,28 +481,29 @@ namespace ExcleHelper
             bool anyFormula = false;
             try
             {
-                Array arr = rng.Formula as Array;
-                if (arr != null)
+                int fr, fc;
+                formulas = Formulas(rng, out fr, out fc);
+                if (fr == rows && fc == cols)
                 {
-                    int lb0 = arr.GetLowerBound(0), lb1 = arr.GetLowerBound(1);
-                    formulas = new object[rows, cols];
-                    for (int i = 0; i < rows; i++)
-                    {
+                    for (int i = 0; i < rows && !anyFormula; i++)
                         for (int j = 0; j < cols; j++)
-                        {
-                            object f = arr.GetValue(lb0 + i, lb1 + j);
-                            formulas[i, j] = f;
-                            string fs = f as string;
-                            if (fs != null && fs.Length > 0 && fs[0] == '=') anyFormula = true;
-                        }
-                    }
+                            if (IsFormula(formulas[i, j])) { anyFormula = true; break; }
+                }
+                else
+                {
+                    formulas = null;
                 }
             }
-            catch { }
+            catch { formulas = null; }
 
             if (!anyFormula)
             {
-                try { rng.Value2 = outv; return rows * cols; }
+                try
+                {
+                    if (rows == 1 && cols == 1) rng.Value2 = outv[0, 0];
+                    else rng.Value2 = outv;
+                    return rows * cols;
+                }
                 catch { return 0; }
             }
 
@@ -232,8 +512,7 @@ namespace ExcleHelper
             {
                 for (int j = 0; j < cols; j++)
                 {
-                    string f = formulas[i, j] as string;
-                    if (f != null && f.Length > 0 && f[0] == '=') continue;   // 公式格保持不动
+                    if (formulas != null && IsFormula(formulas[i, j])) continue; // 公式格保持不动
                     try
                     {
                         ws.Cells[firstRow + i, firstCol + j].Value2 = outv[i, j];
@@ -246,8 +525,8 @@ namespace ExcleHelper
         }
 
         /// <summary>
-        /// Transform every cell of the selection. Formulas are skipped and only
-        /// changed cells are written back, so other cells keep formulas/formats.
+        /// Transform every non-formula cell of the selection. Formulas are truly detected
+        /// via Range.Formula and skipped so formulas stay intact.
         /// </summary>
         internal static void MapSel(Func<string, string> f, string what)
         {
@@ -255,6 +534,15 @@ namespace ExcleHelper
             if (r == null) return;
             int rows, cols;
             object[,] a = Vals(r, out rows, out cols);
+            object[,] fs = null;
+            try
+            {
+                int fr, fc;
+                fs = Formulas(r, out fr, out fc);
+                if (fr != rows || fc != cols) fs = null;
+            }
+            catch { fs = null; }
+
             int changed = 0;
             Turn(true);
             try
@@ -263,8 +551,8 @@ namespace ExcleHelper
                 {
                     for (int j = 0; j < cols; j++)
                     {
+                        if (fs != null && IsFormula(fs[i, j])) continue;
                         object old = a[i, j];
-                        if (IsFormula(old)) continue;
                         string src = S(old);
                         if (src.Length == 0) continue;
                         string dst = f(src);
@@ -273,7 +561,7 @@ namespace ExcleHelper
                         changed++;
                     }
                 }
-                if (changed > 0) r.Value2 = a;
+                if (changed > 0) WriteSkipFormula(r, a);
             }
             finally { Turn(false); }
 
@@ -340,8 +628,6 @@ namespace ExcleHelper
                 dynamic a = sh.Rows[firstRow + start];
                 dynamic b = sh.Rows[firstRow + end];
                 sh.Range(a, b).Delete();
-                Turn(false);
-                Turn(true);
             }
         }
 

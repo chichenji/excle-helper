@@ -44,7 +44,7 @@ namespace ExcleHelper
             msgs.Add(new AiMessage("user", digest));
 
             string err;
-            string text = AiExtOps.Call(cfg, key, msgs, "AI 正在撰写报告", out err);
+            string text = AiExtOps.Call(cfg, key, msgs, "AI 正在撰写报告", false, out err);
             if (text == null) { Xl.Bad("请求失败：" + (err ?? "未知错误")); return true; }
             if (!AiPreview.Show("AI 分析报告（" + addr + "）", text, true)) return true;
 
@@ -141,14 +141,12 @@ namespace ExcleHelper
                 int firstRow = (int)ur.Row, firstCol = (int)ur.Column;
                 for (int i = 0; i < rows && bad.Count < 20; i++)
                 {
-                    for (int j = 0; j < cols; j++)
+                    for (int j = 0; j < cols && bad.Count < 20; j++)
                     {
-                        string s = a[i, j] as string;
-                        if (s == null) continue;
-                        if (s.Length > 1 && s[0] == '=') continue;   // 正常公式
-                        if (s.StartsWith("#") && s.Length <= 12)
+                        string errCode;
+                        if (Xl.IsErrorValue(a[i, j], out errCode))
                         {
-                            bad.Add(s);
+                            bad.Add(errCode);
                             addrs.Add(Addrs(firstRow + i, firstCol + j));
                         }
                     }
@@ -322,7 +320,7 @@ namespace ExcleHelper
             msgs.Add(new AiMessage("user", digest));
 
             string err;
-            string text = AiExtOps.Call(cfg, key, msgs, "AI 正在分析异常", out err);
+            string text = AiExtOps.Call(cfg, key, msgs, "AI 正在分析异常", false, out err);
             if (text == null) { Xl.Bad("请求失败：" + (err ?? "未知错误")); return true; }
             AiPreview.Show("AI 异常解释（" + addr + "）", text, false);
             return true;

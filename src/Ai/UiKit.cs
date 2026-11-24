@@ -138,7 +138,16 @@ namespace ExcleHelper
 
         protected void RoundCorners()
         {
-            try { Region = new Region(UiKit.Rounded(new Rectangle(0, 0, Width, Height), 12)); }
+            if (Width <= 0 || Height <= 0) return;
+            try
+            {
+                using (GraphicsPath p = UiKit.Rounded(new Rectangle(0, 0, Width, Height), 12))
+                {
+                    Region old = Region;
+                    Region = new Region(p);
+                    if (old != null) old.Dispose();
+                }
+            }
             catch { }
         }
 
@@ -241,8 +250,8 @@ namespace ExcleHelper
                 if (_kind != Kind.Ghost) g.DrawPath(pen, p);
             }
             using (SolidBrush tb = new SolidBrush(Enabled ? ink : UiKit.Faint))
+            using (StringFormat sf = new StringFormat())
             {
-                StringFormat sf = new StringFormat();
                 sf.Alignment = StringAlignment.Center;
                 sf.LineAlignment = StringAlignment.Center;
                 g.DrawString(Text, Font, tb, new RectangleF(0, 0, Width, Height), sf);

@@ -149,8 +149,13 @@ namespace ExcleHelper
 
         private void RoundCorners()
         {
+            if (Width <= 0 || Height <= 0) return;
             using (GraphicsPath p = Rounded(new Rectangle(0, 0, Width, Height), 12))
+            {
+                Region old = Region;
                 Region = new Region(p);
+                if (old != null) old.Dispose();
+            }
         }
 
         private static GraphicsPath Rounded(Rectangle r, int radius)
@@ -295,9 +300,9 @@ namespace ExcleHelper
             {
                 using (Font ef = new Font("Microsoft YaHei UI", 10f))
                 using (SolidBrush eb = new SolidBrush(Color.FromArgb(148, 163, 184)))
+                using (StringFormat f = new StringFormat())
                 {
                     Rectangle area = new Rectangle(RailW, HeaderH + 64, Width - RailW, Height - HeaderH - FooterH - 64);
-                    StringFormat f = new StringFormat();
                     f.Alignment = StringAlignment.Center;
                     f.LineAlignment = StringAlignment.Center;
                     g.DrawString("没有匹配的功能，换个关键词试试", ef, eb, area, f);
@@ -365,19 +370,21 @@ namespace ExcleHelper
             using (Bitmap ic = Glyphs.Render(f.Tag, 26))
                 g.DrawImage(ic, new Rectangle(chip.X + 4, chip.Y + 4, 26, 26));
 
-            StringFormat ell = new StringFormat();
-            ell.Trimming = StringTrimming.EllipsisCharacter;
-            ell.FormatFlags = StringFormatFlags.NoWrap;
+            using (StringFormat ell = new StringFormat())
+            {
+                ell.Trimming = StringTrimming.EllipsisCharacter;
+                ell.FormatFlags = StringFormatFlags.NoWrap;
 
-            using (Font nf = new Font("Microsoft YaHei UI", 10f, FontStyle.Bold))
-            using (SolidBrush nb = new SolidBrush(Ink))
-                g.DrawString(f.Label, nf, nb, new RectangleF(r.X + 56, r.Y + 9, r.Width - 72, 20), ell);
+                using (Font nf = new Font("Microsoft YaHei UI", 10f, FontStyle.Bold))
+                using (SolidBrush nb = new SolidBrush(Ink))
+                    g.DrawString(f.Label, nf, nb, new RectangleF(r.X + 56, r.Y + 9, r.Width - 72, 20), ell);
 
-            string sub = f.Tab + "  /  " + f.Group;
-            if (!string.IsNullOrEmpty(f.Hint)) sub += "   ·   " + f.Hint;
-            using (Font sf2 = new Font("Microsoft YaHei UI", 8f))
-            using (SolidBrush sb2 = new SolidBrush(Muted))
-                g.DrawString(sub, sf2, sb2, new RectangleF(r.X + 56, r.Y + 31, r.Width - 72, 18), ell);
+                string sub = f.Tab + "  /  " + f.Group;
+                if (!string.IsNullOrEmpty(f.Hint)) sub += "   ·   " + f.Hint;
+                using (Font sf2 = new Font("Microsoft YaHei UI", 8f))
+                using (SolidBrush sb2 = new SolidBrush(Muted))
+                    g.DrawString(sub, sf2, sb2, new RectangleF(r.X + 56, r.Y + 31, r.Width - 72, 18), ell);
+            }
         }
 
         // ---------------- input ----------------

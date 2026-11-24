@@ -483,8 +483,13 @@ namespace ExcleHelper
                 dynamic wb = Xl.Book;
                 dynamic ws = Xl.AddSheet("透视表");
                 string addr = (string)src.Address(true, true, 1, true);   // 带表名
-                dynamic cache = wb.PivotCaches().Create(1, addr);          // xlDatabase
-                dynamic pt = cache.CreatePivotTable("'" + (string)ws.Name + "'!R3C1", addr);
+                string ptName = "PT_" + Guid.NewGuid().ToString("N").Substring(0, 6);
+                dynamic cache;
+                try { cache = wb.PivotCaches().Create(1, src); }           // xlDatabase（优先传 Range 对象，Excel/WPS 更稳）
+                catch { cache = wb.PivotCaches().Create(1, addr); }
+                dynamic pt;
+                try { pt = cache.CreatePivotTable(ws.Cells[3, 1], ptName); }
+                catch { pt = cache.CreatePivotTable("'" + (string)ws.Name + "'!R3C1", ptName); }
                 pt.PivotFields(rowField).Orientation = 1;                  // xlRowField
                 dynamic df = pt.PivotFields(valField);
                 df.Orientation = 4;                                        // xlDataField

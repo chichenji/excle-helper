@@ -167,7 +167,9 @@ namespace ExcleHelper
                     if (s.Length == 0) continue;
                     double d;
                     if (Num(a[i, j], out d)) nums.Add(d);
-                    else { int c; freq.TryGetValue(s, out c); freq[s] = c + 1; }
+                    int c;
+                    freq.TryGetValue(s, out c);
+                    freq[s] = c + 1;
                 }
                 double mean = 0, median = 0;
                 if (nums.Count > 0)
@@ -194,7 +196,13 @@ namespace ExcleHelper
                     {
                         case 1: if (nums.Count > 0) val = Math.Round(mean, 4); break;
                         case 2: if (nums.Count > 0) val = Math.Round(median, 4); break;
-                        case 3: if (mode3 != null) val = mode3; break;
+                        case 3:
+                            if (mode3 != null)
+                            {
+                                double md;
+                                val = Num(mode3, out md) ? (object)md : mode3;
+                            }
+                            break;
                         case 4: val = last; break;
                         case 5:
                             if (nums.Count > 0)
@@ -315,7 +323,7 @@ namespace ExcleHelper
                     if (Num(a[i, j], out d)) { num++; if (d < mn) mn = d; if (d > mx) mx = d; }
                     else if (DateOps.TryParseDate(s, out dt)) date++;
                 }
-                string type = num >= total * 0.8 ? "数值" : date >= total * 0.8 ? "日期" : "文本";
+                string type = total == 0 ? "空" : (num >= total * 0.8 ? "数值" : date >= total * 0.8 ? "日期" : "文本");
                 string range = (type == "数值" && mn <= mx)
                     ? (mn.ToString("0.##", CultureInfo.InvariantCulture) + " ~ " + mx.ToString("0.##", CultureInfo.InvariantCulture))
                     : "例：" + sample;
@@ -435,13 +443,13 @@ namespace ExcleHelper
                 {
                     string s = Xl.S(a[i, j]);
                     if (s.Trim().Length == 0) continue;
-                    string t = Regex.Replace(s, @"\s+", " ").Trim();
-                    t = t.Replace("　", " ");
-                    // 补全省/市/区后缀（仅当紧邻下一个行政区名时）
-                    t = Regex.Replace(t, @"([\u4e00-\u9fa5]{2,4})(?=(市|区|县))", "$1");
-                    // 去掉重复的省名（如 广东广东省）
+                    string t = s.Replace("　", " ").Replace("，", ",").Replace("：", ":");
+                    t = Regex.Replace(t, @"\s+", " ").Trim();
+                    // 去掉重复的省/市名（如 广东广东省 / 广东省广东省 / 广州广州市 / 广州市广州市）
                     t = Regex.Replace(t, @"([\u4e00-\u9fa5]{2,4}省)\1", "$1");
+                    t = Regex.Replace(t, @"([\u4e00-\u9fa5]{2,4})\1省", "$1省");
                     t = Regex.Replace(t, @"([\u4e00-\u9fa5]{2,4}市)\1", "$1");
+                    t = Regex.Replace(t, @"([\u4e00-\u9fa5]{2,4})\1市", "$1市");
                     if (t != s) { a[i, j] = t; ok++; }
                 }
             if (ok == 0) { Xl.Say("地址已是规范形式。"); return true; }
@@ -460,15 +468,26 @@ namespace ExcleHelper
             int rows, cols;
             object[,] now = Xl.Vals(r, out rows, out cols);
             dynamic wb = Xl.Book;
-            dynamic snap = null, log = null;
-            try
-            {
-                foreach (dynamic s in wb.Worksheets) { }
-            }
-            catch { }
+            bool isNewSnap, isNewLog;
             // 取或建隐藏工作表
-            snap = GetOrCreateSheet(wb, "_snap");
-            log = GetOrCreateSheet(wb, "_changelog");
+            dynamic snap = GetOrCreateSheet(wb, "_snap", out isNewSnap);
+            dynamic log = GetOrCreateSheet(wb, "_changelog", out isNewLog);
+
+            if (isNewLog)
+            {
+                object[,] head = new object[1, 4];
+                head[0, 0] = "时间"; head[0, 1] = "位置"; head[0, 2] = "旧值"; head[0, 3] = "新值";
+                Xl.Dump(log, 1, 1, head);
+            }
+
+            if (isNewSnap)
+            {
+                Xl.Dump(snap, 1, 1, now);
+                try { snap.Visible = 0; log.Visible = 0; } catch { }
+                Xl.Say("已创建基线快照到隐藏表「_snap」（首次执行只建快照，不记变更；后续修改后再次执行即可记录变更）。");
+                return true;
+            }
+
             int sr, sc;
             object[,] old = Xl.Vals(snap.Range[snap.Cells[1, 1], snap.Cells[rows, cols]], out sr, out sc);
 
@@ -491,27 +510,27 @@ namespace ExcleHelper
                     for (int j = 0; j < 4; j++) data[i, j] = diffs[i][j];
                 Xl.Dump(log, logRow, 1, data);
             }
-            if (logRow == 2)
-            {
-                object[,] head = new object[1, 4];
-                head[0, 0] = "时间"; head[0, 1] = "位置"; head[0, 2] = "旧值"; head[0, 3] = "新值";
-                Xl.Dump(log, 1, 1, head);
-            }
             // 覆盖快照
             Xl.Dump(snap, 1, 1, now);
             try { snap.Visible = 0; log.Visible = 0; } catch { }
 
             if (diffs.Count == 0) Xl.Say("与上次快照相比没有变化（已更新快照）。");
-            else Xl.Say("记录 " + diffs.Count + " 处变更到隐藏表「_changelog」（首次执行只建快照，不记变更）。");
+            else Xl.Say("记录 " + diffs.Count + " 处变更到隐藏表「_changelog」。");
             return true;
         }
 
-        private static dynamic GetOrCreateSheet(dynamic wb, string name)
+        private static dynamic GetOrCreateSheet(dynamic wb, string name, out bool created)
         {
-            try { return wb.Worksheets[name]; }
+            try
+            {
+                dynamic existing = wb.Worksheets[name];
+                created = false;
+                return existing;
+            }
             catch { }
             dynamic sh = wb.Worksheets.Add(Type.Missing, wb.Worksheets[wb.Worksheets.Count]);
             sh.Name = name;
+            created = true;
             return sh;
         }
     }

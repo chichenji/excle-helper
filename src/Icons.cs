@@ -94,11 +94,33 @@ namespace ExcleHelper
             return p;
         }
 
-        /// <summary>32×32 品牌图标：领域色渐变圆角块 + 白色首字。</summary>
         /// <summary>32×32 图形图标（细线条，无文字）。</summary>
         internal static Bitmap Get(string label, string tag)
         {
             return Glyphs.Render(tag, 32);
+        }
+
+        /// <summary>
+        /// 为功能区准备 32×32 位图：WPS 部分版本通过 IPictureDisp 加载 32 位透明位图时会把透明通道渲染为黑底，
+        /// 在 WPS 下预先铺一层与工具栏接近的浅色圆角底，避免黑框。
+        /// </summary>
+        internal static Bitmap GetForRibbon(string tag, bool opaqueBack)
+        {
+            Bitmap src = Glyphs.Render(tag, 32);
+            if (!opaqueBack) return src;
+            try
+            {
+                Bitmap flat = new Bitmap(32, 32, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+                using (Graphics g = Graphics.FromImage(flat))
+                {
+                    g.SmoothingMode = SmoothingMode.AntiAlias;
+                    g.Clear(Color.FromArgb(247, 248, 250));
+                    g.DrawImage(src, 0, 0, 32, 32);
+                }
+                src.Dispose();
+                return flat;
+            }
+            catch { return src; }
         }
         /// <summary>把全部图标画成一张总览图，供设计评审。</summary>
         internal static string RenderSheet()

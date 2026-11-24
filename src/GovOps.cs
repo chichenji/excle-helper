@@ -82,18 +82,24 @@ namespace ExcleHelper
                     try { s2 = other.Worksheets[name]; }
                     catch { diffs.Add(new object[] { name, "-", "（新增工作表）", "" }); continue; }
                     sheetsCompared++;
+                    dynamic ur1 = s1.UsedRange, ur2 = s2.UsedRange;
                     int r1, c1, r2, c2;
-                    object[,] a = Xl.Vals(s1.UsedRange, out r1, out c1);
-                    object[,] b = Xl.Vals(s2.UsedRange, out r2, out c2);
-                    int rows = Math.Max(r1, r2), cols = Math.Max(c1, c2);
-                    for (int x = 0; x < rows; x++)
+                    object[,] a = Xl.Vals(ur1, out r1, out c1);
+                    object[,] b = Xl.Vals(ur2, out r2, out c2);
+                    int r1Start = (int)ur1.Row, c1Start = (int)ur1.Column;
+                    int r2Start = (int)ur2.Row, c2Start = (int)ur2.Column;
+                    int minR = Math.Min(r1Start, r2Start), maxR = Math.Max(r1Start + r1 - 1, r2Start + r2 - 1);
+                    int minC = Math.Min(c1Start, c2Start), maxC = Math.Max(c1Start + c1 - 1, c2Start + c2 - 1);
+                    for (int rr = minR; rr <= maxR; rr++)
                     {
-                        for (int y = 0; y < cols; y++)
+                        for (int cc = minC; cc <= maxC; cc++)
                         {
-                            string va = x < r1 && y < c1 ? Xl.S(a[x, y]) : "";
-                            string vb = x < r2 && y < c2 ? Xl.S(b[x, y]) : "";
+                            int ax = rr - r1Start, ay = cc - c1Start;
+                            int bx = rr - r2Start, by = cc - c2Start;
+                            string va = (ax >= 0 && ax < r1 && ay >= 0 && ay < c1) ? Xl.S(a[ax, ay]) : "";
+                            string vb = (bx >= 0 && bx < r2 && by >= 0 && by < c2) ? Xl.S(b[bx, by]) : "";
                             if (va == vb) continue;
-                            diffs.Add(new object[] { name, Addr(x + 1, y + 1), vb, va });
+                            diffs.Add(new object[] { name, Addr(rr, cc), vb, va });
                             if (diffs.Count > 5000) break;
                         }
                         if (diffs.Count > 5000) break;
@@ -191,7 +197,7 @@ namespace ExcleHelper
                 dynamic ur = ws.UsedRange;
                 int rows = (int)ur.Rows.Count, cols = (int)ur.Columns.Count;
                 if ((long)rows * cols > 300000) { Xl.Bad("区域过大，请先缩小。"); return true; }
-                object[,] a = Xl.Vals(ur, out rows, out cols);
+                object[,] a = Xl.Formulas(ur, out rows, out cols);
                 for (int i = 0; i < rows; i++)
                     for (int j = 0; j < cols; j++)
                     {
@@ -317,15 +323,26 @@ namespace ExcleHelper
                 {
                     dynamic ws = wb.Worksheets[i];
                     try { if ((int)ws.Visible == -1) visible++; } catch { }
-                    try { if ((bool)ws.UsedRange.MergeCells) merged++; } catch { }
                     try
                     {
-                        int r = (int)ws.UsedRange.Rows.Count, c = (int)ws.UsedRange.Columns.Count;
-                        cells += r * c;
-                        if ((long)r * c <= 200000)
+                        object mc = ws.UsedRange.MergeCells;
+                        if (mc is DBNull || (mc is bool && (bool)mc)) merged++;
+                    }
+                    catch { }
+                    try
+                    {
+                        dynamic ur = ws.UsedRange;
+                        int r = (int)ur.Rows.Count, c = (int)ur.Columns.Count;
+                        long cnt = (long)r * c;
+                        cells += (int)Math.Min(cnt, int.MaxValue - cells);
+                        if (cnt == 1)
                         {
-                            dynamic f = ws.UsedRange.SpecialCells(-4123);   // formulas
-                            if (f != null) formulas += (int)f.Count;
+                            try { if ((bool)ur.HasFormula) formulas++; } catch { }
+                        }
+                        else if (cnt <= 200000)
+                        {
+                            dynamic f = ur.SpecialCells(-4123);   // formulas
+                            if (f != null) formulas += (int)Xl.CellCount(f);
                         }
                     }
                     catch { }

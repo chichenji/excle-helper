@@ -69,8 +69,6 @@ namespace ExcleHelper
             object[,] a = Xl.Vals(r, out rows, out cols);
             if (cols < 2) { Xl.Bad("请选择两列：基准文本、对比文本。"); return true; }
             object[,] outv = new object[rows, 2];
-            outv[0, 0] = "相似度";
-            outv[0, 1] = "是否相同";
             for (int i = 0; i < rows; i++)
             {
                 string x = Xl.S(a[i, 0]).Trim(), y = Xl.S(a[i, 1]).Trim();
@@ -101,14 +99,12 @@ namespace ExcleHelper
             for (int i = 0; i < rr; i++)
                 for (int j = 0; j < rc; j++)
                 {
-                    string s = Xl.S(a[i, j]).Trim();
+                    string s = Xl.S(refs[i, j]).Trim();
                     if (s.Length > 0 && !pool.Contains(s)) pool.Add(s);
                 }
             if (pool.Count == 0) { Xl.Bad("对照表为空。"); return true; }
 
             object[,] outv = new object[rows, 2];
-            outv[0, 0] = "最佳匹配";
-            outv[0, 1] = "相似度";
             for (int i = 0; i < rows; i++)
             {
                 string s = Xl.S(a[i, 0]).Trim();
@@ -263,7 +259,7 @@ namespace ExcleHelper
             Xl.Turn(true);
             try { Xl.WriteSkipFormula(r, a); }
             finally { Xl.Turn(false); }
-            Xl.Say(Xl.Fmt("已按 {r} 条规则替换 {n} 个单元格。", mr).Replace("{r}", mr.ToString(CultureInfo.InvariantCulture)).Replace("{n}", n.ToString(CultureInfo.InvariantCulture)));
+            Xl.Say("已按 " + mr + " 条规则替换 " + n + " 个单元格。");
             return true;
         }
 
@@ -421,12 +417,13 @@ namespace ExcleHelper
                 int k = rnd.Next(i + 1);
                 int t = idx[i]; idx[i] = idx[k]; idx[k] = t;
             }
-            idx.Sort();
+            List<int> picked = idx.GetRange(0, take);
+            picked.Sort();
             object[,] outv = new object[take + 1, cols];
             for (int j = 0; j < cols; j++) outv[0, j] = a[0, j];
             for (int i = 0; i < take; i++)
                 for (int j = 0; j < cols; j++)
-                    outv[i + 1, j] = a[idx[i], j];
+                    outv[i + 1, j] = a[picked[i], j];
             dynamic sh = Xl.AddSheet("随机抽样");
             Xl.Dump(sh, 1, 1, outv);
             Xl.Say("已从 " + (rows - 1) + " 行中抽取 " + take + " 行 → 工作表「" + (string)sh.Name + "」。");
@@ -578,8 +575,11 @@ namespace ExcleHelper
             }
 
             object[,] outv = new object[rows, 2];
-            outv[0, 0] = "区间";
-            outv[0, 1] = "组号";
+            if (!Xl.IsNumber(a[0, 0]))
+            {
+                outv[0, 0] = "区间";
+                outv[0, 1] = "组号";
+            }
             for (int i = 0; i < rows; i++)
             {
                 if (!Xl.IsNumber(a[i, 0])) continue;
@@ -614,7 +614,7 @@ namespace ExcleHelper
             double expect;
             if (s.Trim().Length == 0)
             {
-                dynamic act = Xl.Sel;
+                dynamic act = Xl.ActiveCell ?? Xl.Sel;
                 expect = Xl.D(act.Value2);
             }
             else if (!double.TryParse(s.Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out expect))
@@ -652,20 +652,34 @@ namespace ExcleHelper
 
             int rows, cols;
             Xl.Vals(r, out rows, out cols);
-            Random rnd = new Random(Guid.NewGuid().GetHashCode());
             object[,] outv = new object[rows, cols];
-            for (int i = 0; i < rows; i++)
-                for (int j = 0; j < cols; j++)
-                {
-                    StringBuilder sb = new StringBuilder();
-                    for (int k = 0; k < len; k++) sb.Append(pool[rnd.Next(pool.Length)]);
-                    outv[i, j] = sb.ToString();
-                }
+            using (RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider())
+            {
+                for (int i = 0; i < rows; i++)
+                    for (int j = 0; j < cols; j++)
+                    {
+                        StringBuilder sb = new StringBuilder(len);
+                        for (int k = 0; k < len; k++) sb.Append(pool[NextSecureInt(rng, pool.Length)]);
+                        outv[i, j] = sb.ToString();
+                    }
+            }
             Xl.Turn(true);
             try { Xl.WriteSkipFormula(r, outv); }
             finally { Xl.Turn(false); }
             Xl.Say(Xl.Fmt("已生成 {n} 个随机密码（长度 {L}）。", rows * cols).Replace("{L}", len.ToString(CultureInfo.InvariantCulture)));
             return true;
+        }
+
+        private static int NextSecureInt(RNGCryptoServiceProvider rng, int maxExclusive)
+        {
+            byte[] buf = new byte[4];
+            uint limit = uint.MaxValue - (uint.MaxValue % (uint)maxExclusive);
+            while (true)
+            {
+                rng.GetBytes(buf);
+                uint v = BitConverter.ToUInt32(buf, 0);
+                if (v < limit) return (int)(v % (uint)maxExclusive);
+            }
         }
     }
 }

@@ -7,8 +7,8 @@ using System.Text;
 namespace ExcleHelper
 {
     /// <summary>
-    /// L0 host shell: a plain, VSTO-free COM add-in.
-    /// Excel calls OnConnection -> GetCustomUI -> OnButton (late bound IDispatch).
+    /// L0 host shell: a plain, VSTO-free COM add-in compatible with both Microsoft Excel and WPS Spreadsheets (ET).
+    /// Host calls OnConnection -> GetCustomUI -> OnButton (late bound IDispatch).
     /// No VSTO runtime, no PIA, no administrator rights, no license layer.
     /// </summary>
     [ComVisible(true)]
@@ -40,8 +40,9 @@ namespace ExcleHelper
         public void OnConnection(object Application, ext_ConnectMode ConnectMode,
                                  object AddInInst, ref Array custom)
         {
-            Trace("OnConnection: enter mode=" + (int)ConnectMode);
-            Xl.App = Application;
+            Xl.Attach(Application);
+            try { if (AddInInst != null) ((dynamic)AddInInst).Object = this; } catch { }
+            Trace("OnConnection: enter mode=" + (int)ConnectMode + " host=" + Xl.HostName + " arch=" + (IntPtr.Size * 8) + "bit");
             // quiet mode for scripted / unattended runs: never block on a message box
             try
             {
@@ -60,7 +61,7 @@ namespace ExcleHelper
         {
             Trace("OnDisconnection: enter mode=" + (int)RemoveMode);
             Rot.Unpublish();
-            Xl.App = null;
+            Xl.Detach();
         }
 
         public void OnAddInsUpdate(ref Array custom) { Trace("OnAddInsUpdate"); }
@@ -85,12 +86,9 @@ namespace ExcleHelper
         }
 
         // ---- ribbon callbacks ----
-        // Office reaches these through IDispatch on the class's AutoDispatch
-        // interface. A parameter typed as a COM interface (IRibbonControl /
-        // IRibbonUI) is not always expressible there, in which case Office can
-        // not bind the name and silently drops the callback. Taking `object`
-        // keeps the signature VARIANT-compatible; the members are then read by
-        // IDispatch reflection.
+        // Office / WPS reach these through IDispatch on the class's AutoDispatch
+        // interface. Taking `object` keeps the signature VARIANT-compatible across
+        // both Excel and WPS; members are read by IDispatch reflection.
         internal static string ComProp(object o, string name)
         {
             if (o == null) return "";
@@ -113,18 +111,21 @@ namespace ExcleHelper
             try
             {
                 _imgCalls++;
-                if (_imgCalls <= 2 || _imgCalls % 25 == 0) Trace("OnGetImage #" + _imgCalls + " id=" + ComProp(control, "Id"));
                 string id = ComProp(control, "Id");
-                Feature f = Catalog.ById(id);
-                if (f == null) return Icons.ToPictureDisp(Icons.Get("·", "ui."));
-                return Icons.ToPictureDisp(Icons.Get(f.Label, f.Tag));
+                if (_imgCalls <= 2 || _imgCalls % 25 == 0) Trace("OnGetImage #" + _imgCalls + " id=" + id);
+                string tag = Catalog.IconTagById(id) ?? "ui.";
+                using (System.Drawing.Bitmap bmp = Icons.GetForRibbon(tag, Xl.IsWps))
+                {
+                    return Icons.ToPictureDisp(bmp);
+                }
             }
             catch { return null; }
         }
+
         // fired once the custom UI is instantiated
         public void OnRibbonLoad(object ribbon)
         {
-            Trace("OnRibbonLoad: custom UI accepted by Office");
+            Trace("OnRibbonLoad: custom UI accepted by " + Xl.HostName);
         }
 
         // every button lands here
@@ -182,7 +183,7 @@ namespace ExcleHelper
         // ---- introspection helpers (used by the installer / tests) ----
         public string Ping()
         {
-            return "EXCLE助手 OK / ops=" + Ops.Count + " / connected=" + (Xl.App != null);
+            return "EXCLE助手 OK / host=" + Xl.HostName + " / ops=" + Ops.Count + " / connected=" + (Xl.App != null);
         }
 
         /// <summary>导出图标总览 PNG（设计评审用，不需要 Excel）。</summary>
@@ -204,7 +205,7 @@ namespace ExcleHelper
 
         public string Version
         {
-            get { return "1.0.0"; }
+            get { return "1.1.0"; }
         }
 
         public string LastOperation

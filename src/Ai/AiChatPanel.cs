@@ -127,11 +127,27 @@ namespace ExcleHelper
 
         private FlatButton _settingsBtn;
         private FlatButton _clearBtn;
+        private Font _boldFont;
 
         private void RoundCorners()
         {
-            try { Region = new Region(UiKit.Rounded(new Rectangle(0, 0, Width, Height), 12)); }
+            if (Width <= 0 || Height <= 0) return;
+            try
+            {
+                using (GraphicsPath p = UiKit.Rounded(new Rectangle(0, 0, Width, Height), 12))
+                {
+                    Region old = Region;
+                    Region = new Region(p);
+                    if (old != null) old.Dispose();
+                }
+            }
             catch { }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && _boldFont != null) { _boldFont.Dispose(); _boldFont = null; }
+            base.Dispose(disposing);
         }
 
         private void LayoutChildren()
@@ -172,8 +188,8 @@ namespace ExcleHelper
                 if (s != null) sel = "当前选区 " + (string)s.Address(false, false);
             }
             catch { }
-            _modelLabel.Text = c.Model + "   ·   " + (AiSecret.Has ? "已配置密钥" : "未配置密钥（请点设置）")
-                             + "   ·   " + sel;
+            string keyState = AiSecret.Has ? "已配置密钥" : (c.IsLocal ? "本地模型（免密钥）" : "未配置密钥（请点设置）");
+            _modelLabel.Text = c.Model + "   ·   " + keyState + "   ·   " + sel;
         }
 
         private void AppendTip()
@@ -192,7 +208,11 @@ namespace ExcleHelper
             _log.SelectionStart = _log.TextLength;
             _log.SelectionLength = 0;
             _log.SelectionColor = color;
-            if (bold) _log.SelectionFont = new Font(_log.Font, FontStyle.Bold);
+            if (bold)
+            {
+                if (_boldFont == null) _boldFont = new Font(_log.Font, FontStyle.Bold);
+                _log.SelectionFont = _boldFont;
+            }
             _log.AppendText(text);
             if (bold) _log.SelectionFont = _log.Font;
             _log.ScrollToCaret();
@@ -207,7 +227,7 @@ namespace ExcleHelper
             AiConfig cfg = AiConfig.Load();
             string key = Environment.GetEnvironmentVariable("EXCLE_AI_KEY");
             if (string.IsNullOrEmpty(key)) key = AiSecret.Load();
-            if (key.Length == 0)
+            if (key.Length == 0 && !cfg.IsLocal)
             {
                 Append("（还没有配置 API Key，请点右上角「设置」）\n\n", UiKit.Danger, false);
                 return;
@@ -258,7 +278,7 @@ namespace ExcleHelper
                         });
                     }
                     catch { }
-                }, delegate { return _cancelled; }, out err);
+                }, delegate { return _cancelled; }, false, out err);
 
                 string done = full;
                 string e2 = err;

@@ -56,7 +56,7 @@ namespace ExcleHelper
                 dynamic fc;
                 if (op == 5)
                 {
-                    string addr = (string)r.Cells[1, 1].Address(true, true);
+                    string addr = (string)r.Cells[1, 1].Address(false, false);
                     string f = "=COUNTIF(" + (string)r.Address(true, true) + "," + addr + ")>1";
                     fc = r.FormatConditions.Add(2, Type.Missing, f, Type.Missing);   // xlExpression: 表达式在 Formula1
                 }
@@ -214,22 +214,36 @@ namespace ExcleHelper
                 if (src is Array)
                 {
                     Array arr = (Array)src;
-                    for (int i = arr.Length; i >= 1; i--)
+                    for (int i = arr.GetUpperBound(0); i >= arr.GetLowerBound(0); i--)
                     {
-                        try { wb.BreakLink((string)arr.GetValue(i), 1); links++; }
+                        try
+                        {
+                            string linkName = arr.GetValue(i) as string;
+                            if (!string.IsNullOrEmpty(linkName)) { wb.BreakLink(linkName, 1); links++; }
+                        }
                         catch { }
                     }
                 }
                 // 兜底：只把「含外链标记 [文件名]」的公式转成当前值，普通公式一律不动。
-                // 用 SpecialCells 一次定位公式格，避免逐格 COM 往返。
                 int converted = 0, noFormula = 0;
                 int n = (int)wb.Worksheets.Count;
                 for (int i = 1; i <= n; i++)
                 {
                     dynamic ws = wb.Worksheets[i];
+                    dynamic ur = ws.UsedRange;
                     dynamic cells = null;
-                    try { cells = ws.UsedRange.SpecialCells(-4123); }   // xlCellTypeFormulas
-                    catch { noFormula++; continue; }
+                    if (Xl.CellCount(ur) <= 1)
+                    {
+                        bool hasF = false;
+                        try { hasF = (bool)ur.HasFormula; } catch { }
+                        if (!hasF) { noFormula++; continue; }
+                        cells = ur;
+                    }
+                    else
+                    {
+                        try { cells = ur.SpecialCells(-4123); }   // xlCellTypeFormulas
+                        catch { noFormula++; continue; }
+                    }
                     if (cells == null) { noFormula++; continue; }
                     int areas = 1;
                     try { areas = (int)cells.Areas.Count; } catch { }
@@ -238,22 +252,19 @@ namespace ExcleHelper
                         dynamic area = (areas == 1) ? cells : cells.Areas[a];
                         try
                         {
-                            Array fs = area.Formula as Array;
-                            Array vs = area.Value2 as Array;
-                            if (fs == null || vs == null) continue;
-                            int lb0 = fs.GetLowerBound(0), lb1 = fs.GetLowerBound(1);
-                            int rr = fs.GetUpperBound(0) - lb0 + 1;
-                            int cc = fs.GetUpperBound(1) - lb1 + 1;
+                            int rr, cc, vr, vc;
+                            object[,] fs = Xl.Formulas(area, out rr, out cc);
+                            object[,] vs = Xl.Vals(area, out vr, out vc);
                             int r0 = (int)area.Row, c0 = (int)area.Column;
-                            for (int x = 0; x < rr; x++)
+                            for (int x = 0; x < rr && x < vr; x++)
                             {
-                                for (int y = 0; y < cc; y++)
+                                for (int y = 0; y < cc && y < vc; y++)
                                 {
-                                    string f = fs.GetValue(lb0 + x, lb1 + y) as string;
+                                    string f = fs[x, y] as string;
                                     if (f == null || f.IndexOf('[') < 0) continue;
                                     try
                                     {
-                                        ws.Cells[r0 + x, c0 + y].Value2 = vs.GetValue(lb0 + x, lb1 + y);
+                                        ws.Cells[r0 + x, c0 + y].Value2 = vs[x, y];
                                         converted++;
                                     }
                                     catch { }
@@ -379,7 +390,7 @@ namespace ExcleHelper
             object[,] a = Xl.Vals(r, out rows, out cols);
             if (rows < 2) { Xl.Bad("至少需要标题行 + 一行数据。"); return true; }
 
-            int outRows = rows * 2;
+            int outRows = (rows - 1) * 2;
             object[,] outv = new object[outRows, cols];
             int k = 0;
             for (int i = 1; i < rows; i++)
@@ -432,13 +443,15 @@ namespace ExcleHelper
             {
                 for (int i = 1; i < rows; i++)
                 {
-                    ws.Copy();
-                    dynamic nb = Xl.App.ActiveWorkbook;
-                    dynamic nws = nb.Worksheets[1];
+                    dynamic nb = null;
                     try
                     {
+                        ws.Copy();
+                        nb = Xl.App.ActiveWorkbook;
+                        if (nb == null || object.ReferenceEquals(nb, wb)) continue;
+                        dynamic nws = nb.Worksheets[1];
                         dynamic ur = nws.UsedRange;
-                        int rr = (int)ur.Rows.Count, cc = (int)ur.Columns.Count;
+                        int rr, cc;
                         object[,] cells = Xl.Vals(ur, out rr, out cc);
                         int ur0 = (int)ur.Row, uc0 = (int)ur.Column;
                         for (int x = 0; x < rr; x++)
@@ -461,16 +474,25 @@ namespace ExcleHelper
                         }
                         string name = SafeName(Xl.S(a[i, keyIdx - 1]));
                         if (name.Length == 0) name = "book" + i;
-                        nb.SaveAs(Path.Combine(folder, name + ".xlsx"));
-                        nb.Close(false);
+                        Xl.SaveWorkbookAsXlsx(nb, Path.Combine(folder, name + ".xlsx"));
                         ok++;
                     }
-                    catch { try { Xl.App.ActiveWorkbook.Close(false); } catch { } }
+                    catch { }
+                    finally
+                    {
+                        if (nb != null && !object.ReferenceEquals(nb, wb))
+                        {
+                            try { nb.Close(false); } catch { }
+                        }
+                    }
                 }
             }
             catch (Exception ex) { Xl.Bad("生成失败：" + ex.Message); }
-            finally { Xl.Turn(false); }
-            ws.Activate();
+            finally
+            {
+                try { wb.Activate(); ws.Activate(); } catch { }
+                Xl.Turn(false);
+            }
             Xl.Say("已生成 " + ok + " 个工作簿到：\n" + folder);
             return true;
         }

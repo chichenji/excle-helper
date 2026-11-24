@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<customUI xmlns="http://schemas.microsoft.com/office/2009/07/customui" onLoad="OnRibbonLoad">
+<customUI xmlns="http://schemas.microsoft.com/office/2006/01/customui" onLoad="OnRibbonLoad">
   <ribbon>
     <tabs>
       <tab id="tabHome" label="EXCLE助手">
@@ -486,7 +486,6 @@
             <button id="bPicExport" label="导出图片…" tag="pic.export" onAction="OnButton" />
             <button id="bPicDel" label="删除图片" tag="pic.del" onAction="OnButton" />
             <button id="bPicWm" label="添加水印…" tag="pic.watermark" onAction="OnButton" />
-            <menuSeparator id="sepPic2" />
           </menu>
           <menu id="mNew19" label="二维码与截图" size="large" getImage="OnGetImage" screentip="二维码与截图">
             <button id="bPicQr" label="生成二维码（取单元格文本）" tag="pic.qrcode" onAction="OnButton" />

@@ -155,7 +155,7 @@ namespace ExcleHelper
             }
             if (n == 0) { Xl.Say("没有 15 位身份证号。"); return true; }
             Xl.Turn(true);
-            try { r.Value2 = a; }
+            try { Xl.WriteSkipFormula(r, a); }
             finally { Xl.Turn(false); }
             Xl.Say(Xl.Fmt("已升级 {n} 个号码。", n));
             return true;
@@ -181,7 +181,7 @@ namespace ExcleHelper
             }
             if (n == 0) { Xl.Say("没有可处理的身份证号。"); return true; }
             Xl.Turn(true);
-            try { r.Value2 = a; }
+            try { Xl.WriteSkipFormula(r, a); }
             finally { Xl.Turn(false); }
             Xl.Say(Xl.Fmt("已处理 {n} 个号码。", n));
             return true;
@@ -207,7 +207,7 @@ namespace ExcleHelper
             }
             if (n == 0) { Xl.Say("没有 11 位手机号。"); return true; }
             Xl.Turn(true);
-            try { r.Value2 = a; }
+            try { Xl.WriteSkipFormula(r, a); }
             finally { Xl.Turn(false); }
             Xl.Say(Xl.Fmt("已分段 {n} 个号码。", n));
             return true;
@@ -232,7 +232,7 @@ namespace ExcleHelper
             }
             if (n == 0) { Xl.Say("没有 11 位手机号。"); return true; }
             Xl.Turn(true);
-            try { r.Value2 = a; }
+            try { Xl.WriteSkipFormula(r, a); }
             finally { Xl.Turn(false); }
             Xl.Say(Xl.Fmt("已打码 {n} 个号码。", n));
             return true;
@@ -302,7 +302,7 @@ namespace ExcleHelper
             }
             if (n == 0) { Xl.Say("没有可处理的数据。"); return true; }
             Xl.Turn(true);
-            try { r.Value2 = a; }
+            try { Xl.WriteSkipFormula(r, a); }
             finally { Xl.Turn(false); }
             Xl.Say(Xl.Fmt("已打码 {n} 个姓名。", n));
             return true;
@@ -355,7 +355,7 @@ namespace ExcleHelper
             }
             if (n == 0) { Xl.Say("没有可处理的内容。"); return true; }
             Xl.Turn(true);
-            try { r.Value2 = a; }
+            try { Xl.WriteSkipFormula(r, a); }
             finally { Xl.Turn(false); }
             Xl.Say(Xl.Fmt("已转换 {n} 个单元格。", n));
             return true;
@@ -382,7 +382,7 @@ namespace ExcleHelper
             }
             if (total == 0) { Xl.Say("没有 12-19 位的卡号。"); return true; }
             Xl.Turn(true);
-            try { r.Value2 = a; }
+            try { Xl.WriteSkipFormula(r, a); }
             finally { Xl.Turn(false); }
             Xl.Say("校验完成：" + good.ToString(CultureInfo.InvariantCulture) + " 个正确，"
                    + (total - good).ToString(CultureInfo.InvariantCulture) + " 个错误。");
@@ -447,7 +447,7 @@ namespace ExcleHelper
             }
             if (total == 0) { Xl.Say("没有 18 位信用代码。"); return true; }
             Xl.Turn(true);
-            try { r.Value2 = a; }
+            try { Xl.WriteSkipFormula(r, a); }
             finally { Xl.Turn(false); }
             Xl.Say("校验完成：" + good.ToString(CultureInfo.InvariantCulture) + " 个正确，"
                    + (total - good).ToString(CultureInfo.InvariantCulture) + " 个错误。");

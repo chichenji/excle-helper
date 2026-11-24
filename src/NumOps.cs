@@ -16,6 +16,15 @@ namespace ExcleHelper
             if (r == null) return;
             int rows, cols;
             object[,] a = Xl.Vals(r, out rows, out cols);
+            object[,] fs = null;
+            try
+            {
+                int fr, fc;
+                fs = Xl.Formulas(r, out fr, out fc);
+                if (fr != rows || fc != cols) fs = null;
+            }
+            catch { fs = null; }
+
             int n = 0;
             Xl.Turn(true);
             try
@@ -24,15 +33,15 @@ namespace ExcleHelper
                 {
                     for (int j = 0; j < cols; j++)
                     {
+                        if (fs != null && Xl.IsFormula(fs[i, j])) continue;
                         object old = a[i, j];
-                        if (Xl.IsFormula(old)) continue;
                         object nv = f(old);
                         if (Equals(nv, old)) continue;
                         a[i, j] = nv;
                         n++;
                     }
                 }
-                if (n > 0) r.Value2 = a;
+                if (n > 0) Xl.WriteSkipFormula(r, a);
             }
             finally { Xl.Turn(false); }
 
@@ -288,7 +297,7 @@ namespace ExcleHelper
         internal static void Register()
         {
             Ops.Reg("n.seq.num", SeqNum);
-            Ops.Reg("n.seq.letter", () => { FillSeq(Letter, "要填充序列的区域"); return true; });
+            Ops.Reg("n.seq.letter", () => { FillSeq(i => Letter(i + 1), "要填充序列的区域"); return true; });
             Ops.Reg("n.seq.week", SeqWeek);
             Ops.Reg("n.seq.month", SeqMonth);
             Ops.Reg("n.seq.cnnum", () => { FillSeq(i => NumToCn(i + 1), "要填充序列的区域"); return true; });
@@ -507,7 +516,7 @@ namespace ExcleHelper
             }
             if (n == 0) { Xl.Say("没有空白单元格。"); return true; }
             Xl.Turn(true);
-            try { r.Value2 = a; }
+            try { Xl.WriteSkipFormula(r, a); }
             finally { Xl.Turn(false); }
             Xl.Say(Xl.Fmt("已填充 {n} 个空白单元格。", n));
             return true;

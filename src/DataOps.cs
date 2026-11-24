@@ -185,6 +185,15 @@ namespace ExcleHelper
             if (r == null) return;
             int rows, cols;
             object[,] a = Xl.Vals(r, out rows, out cols);
+            object[,] fs = null;
+            try
+            {
+                int fr, fc;
+                fs = Xl.Formulas(r, out fr, out fc);
+                if (fr != rows || fc != cols) fs = null;
+            }
+            catch { fs = null; }
+
             int n = 0;
             Xl.Turn(true);
             try
@@ -193,14 +202,14 @@ namespace ExcleHelper
                 {
                     for (int j = 0; j < cols; j++)
                     {
+                        if (fs != null && Xl.IsFormula(fs[i, j])) continue;
                         object v = a[i, j];
-                        if (Xl.IsFormula(v)) continue;
                         if (!shouldClear(v)) continue;
                         a[i, j] = null;
                         n++;
                     }
                 }
-                if (n > 0) r.Value2 = a;
+                if (n > 0) Xl.WriteSkipFormula(r, a);
             }
             finally { Xl.Turn(false); }
             if (n == 0) Xl.Say("没有符合条件的内容。");
@@ -227,17 +236,38 @@ namespace ExcleHelper
         {
             dynamic r = Xl.SelRange("要清空错误值的区域");
             if (r == null) return true;
+            int cleared = 0;
+            Xl.Turn(true);
             try
             {
-                dynamic cells = r.SpecialCells(2, 16); // constants, errors
-                int n = (int)cells.Count;
-                cells.ClearContents();
-                Xl.Say(Xl.Fmt("已清空 {n} 个错误值。", n));
+                if (Xl.CellCount(r) == 1)
+                {
+                    string errCode;
+                    if (Xl.IsErrorValue(r.Value2, out errCode))
+                    {
+                        r.ClearContents();
+                        cleared = 1;
+                    }
+                }
+                else
+                {
+                    // 同时清理公式错误（xlCellTypeFormulas=-4123, xlErrors=16）与常量错误（xlCellTypeConstants=2, xlErrors=16）
+                    foreach (int kind in new int[] { -4123, 2 })
+                    {
+                        try
+                        {
+                            dynamic cells = r.SpecialCells(kind, 16);
+                            int n = (int)Xl.CellCount(cells);
+                            cells.ClearContents();
+                            cleared += n;
+                        }
+                        catch { }
+                    }
+                }
             }
-            catch
-            {
-                Xl.Say("没有错误值。");
-            }
+            finally { Xl.Turn(false); }
+            if (cleared == 0) Xl.Say("没有错误值。");
+            else Xl.Say(Xl.Fmt("已清空 {n} 个错误值。", cleared));
             return true;
         }
 
@@ -437,7 +467,7 @@ namespace ExcleHelper
                         {
                             dynamic c1 = ws.Cells[firstRow + i, firstCol + j];
                             dynamic c2 = ws.Cells[firstRow + k, firstCol + j];
-                            ws.Range(c1, c2).Merge();
+                            Xl.MergeSilent(ws.Range(c1, c2));
                             merged++;
                         }
                         i = k + 1;
@@ -492,41 +522,25 @@ namespace ExcleHelper
             if (r == null) return true;
             int rows, cols;
             object[,] a = Xl.Vals(r, out rows, out cols);
-            dynamic ws = r.Worksheet;
-            int firstRow = (int)r.Row, firstCol = (int)r.Column;
-            int merged = 0;
+            if (rows == 1 && cols == 1) { Xl.Say("请至少选择两个单元格。"); return true; }
+
+            List<string> vals = new List<string>();
+            for (int i = 0; i < rows; i++)
+                for (int j = 0; j < cols; j++)
+                {
+                    string s = Xl.S(a[i, j]).Trim();
+                    if (s.Length > 0) vals.Add(s);
+                }
+            string joined = string.Join(" ", vals.ToArray());
+
             Xl.Turn(true);
             try
             {
-                for (int j = 0; j < cols; j++)
-                {
-                    int i = 0;
-                    while (i < rows)
-                    {
-                        string v = Xl.S(a[i, j]);
-                        int k = i;
-                        while (k + 1 < rows && Xl.S(a[k + 1, j]) == v) k++;
-                        if (v.Trim().Length > 0 && k > i)
-                        {
-                            List<string> vals = new List<string>();
-                            for (int x = i; x <= k; x++)
-                            {
-                                string s = Xl.S(a[x, j]);
-                                if (s.Length > 0 && !vals.Contains(s)) vals.Add(s);
-                            }
-                            dynamic c1 = ws.Cells[firstRow + i, firstCol + j];
-                            dynamic c2 = ws.Cells[firstRow + k, firstCol + j];
-                            dynamic rng = ws.Range(c1, c2);
-                            rng.Merge();
-                            c1.Value2 = string.Join("\n", vals.ToArray());
-                            merged++;
-                        }
-                        i = k + 1;
-                    }
-                }
+                Xl.MergeSilent(r);
+                r.Cells[1, 1].Value2 = joined;
             }
             finally { Xl.Turn(false); }
-            Xl.Say(Xl.Fmt("已合并 {n} 处并保留内容。", merged));
+            Xl.Say("已合并选区并保留全部内容（共拼接 " + vals.Count.ToString(CultureInfo.InvariantCulture) + " 项）。");
             return true;
         }
 
@@ -719,12 +733,13 @@ namespace ExcleHelper
             for (int i = 1; i < rows; i++)
             {
                 string k = Xl.S(a[i, keyCol - 1]);
-                if (cur != k)
+                if (keys.Count == 0 || !string.Equals(cur, k, StringComparison.Ordinal))
                 {
-                    if (cur != null) { keys.Add(cur); sums.Add(0); counts.Add(0); }
                     cur = k;
+                    keys.Add(k);
+                    sums.Add(0);
+                    counts.Add(0);
                 }
-                if (keys.Count == 0) { keys.Add(cur); sums.Add(0); counts.Add(0); }
                 int li = keys.Count - 1;
                 if (Xl.IsNumber(a[i, valCol - 1])) sums[li] = sums[li] + Xl.D(a[i, valCol - 1]);
                 counts[li] = counts[li] + 1;
@@ -824,7 +839,7 @@ namespace ExcleHelper
             }
             if (filled == 0) { Xl.Say("没有找到「数字块 + 空白」的组合。"); return true; }
             Xl.Turn(true);
-            try { r.Value2 = a; }
+            try { Xl.WriteSkipFormula(r, a); }
             finally { Xl.Turn(false); }
             Xl.Say(Xl.Fmt("已在 {n} 个空白格填入上方数字之和。", filled));
             return true;

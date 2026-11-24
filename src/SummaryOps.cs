@@ -71,6 +71,26 @@ namespace ExcleHelper
             return list;
         }
 
+        private static string[] FindSpreadsheetFiles(string folder)
+        {
+            List<string> all = new List<string>();
+            foreach (string pat in new string[] { "*.xlsx", "*.xlsm", "*.xls", "*.et" })
+            {
+                try
+                {
+                    foreach (string f in Directory.GetFiles(folder, pat))
+                    {
+                        string fn = Path.GetFileName(f) ?? "";
+                        if (fn.StartsWith("~$", StringComparison.Ordinal)) continue;
+                        if (!all.Contains(f)) all.Add(f);
+                    }
+                }
+                catch { }
+            }
+            all.Sort(StringComparer.OrdinalIgnoreCase);
+            return all.ToArray();
+        }
+
         // ---------------- merge ----------------
         private static bool MergeTwo()
         {
@@ -87,7 +107,6 @@ namespace ExcleHelper
             }
             bool header = p[2].Trim() != "0";
 
-            List<string> rows = new List<string>();
             List<object[]> data = new List<object[]>();
             int width = 0;
             bool headerAdded = false;
@@ -102,8 +121,9 @@ namespace ExcleHelper
                 if (c > width) width = c;
                 for (int i = 0; i < r; i++)
                 {
-                    if (header && !headerAdded && i == 0)
+                    if (header && i == 0)
                     {
+                        if (headerAdded) continue;
                         object[] h = new object[width];
                         for (int j = 0; j < c; j++) h[j] = a[0, j];
                         data.Add(h);
@@ -157,8 +177,9 @@ namespace ExcleHelper
                 if (c > width) width = c;
                 for (int i = 0; i < r; i++)
                 {
-                    if (!headerAdded && i == 0)
+                    if (i == 0)
                     {
+                        if (headerAdded) continue;
                         object[] h = new object[width];
                         for (int j = 0; j < c; j++) h[j] = a[0, j];
                         data.Add(h);
@@ -180,11 +201,10 @@ namespace ExcleHelper
 
         private static bool MergeBooks()
         {
-            string folder = PickFolder("选择要合并的 Excel 文件所在文件夹");
+            string folder = PickFolder("选择要合并的表格文件所在文件夹");
             if (folder == null) return true;
-            string[] files = Directory.GetFiles(folder, "*.xlsx");
-            if (files.Length == 0) files = Directory.GetFiles(folder, "*.xls*");
-            if (files.Length == 0) { Xl.Bad("该文件夹下没有 Excel 文件。"); return true; }
+            string[] files = FindSpreadsheetFiles(folder);
+            if (files.Length == 0) { Xl.Bad("该文件夹下没有 Excel / WPS 表格文件。"); return true; }
 
             string mode = Ask.One("合并多簿",
                 "1 = 每个文件的所有工作表都合并\n2 = 只取每个文件的第一张表", "1");
@@ -217,8 +237,9 @@ namespace ExcleHelper
                             if (c > width) width = c;
                             for (int i = 0; i < r; i++)
                             {
-                                if (!headerAdded && i == 0)
+                                if (i == 0)
                                 {
+                                    if (headerAdded) continue;
                                     object[] h = new object[width];
                                     for (int j = 0; j < c; j++) h[j] = a[0, j];
                                     data.Add(h);
@@ -308,11 +329,10 @@ namespace ExcleHelper
 
         private static bool SumBooks()
         {
-            string folder = PickFolder("选择要汇总的 Excel 文件所在文件夹");
+            string folder = PickFolder("选择要汇总的表格文件所在文件夹");
             if (folder == null) return true;
-            string[] files = Directory.GetFiles(folder, "*.xlsx");
-            if (files.Length == 0) files = Directory.GetFiles(folder, "*.xls*");
-            if (files.Length == 0) { Xl.Bad("该文件夹下没有 Excel 文件。"); return true; }
+            string[] files = FindSpreadsheetFiles(folder);
+            if (files.Length == 0) { Xl.Bad("该文件夹下没有 Excel / WPS 表格文件。"); return true; }
             string sheetName = Ask.One("汇总多簿",
                 "汇总每个文件的哪张表(留空=第一张)", "");
             if (sheetName == null) return true;
@@ -361,9 +381,8 @@ namespace ExcleHelper
             if (folder == null) return true;
             if (!Xl.Ask("将遍历该文件夹下所有 Excel 文件的全部可见工作表，按位置累加（文本取首个非空值）。继续？")) return true;
 
-            string[] files = Directory.GetFiles(folder, "*.xlsx");
-            if (files.Length == 0) files = Directory.GetFiles(folder, "*.xls*");
-            if (files.Length == 0) { Xl.Bad("该文件夹下没有 Excel 文件。"); return true; }
+            string[] files = FindSpreadsheetFiles(folder);
+            if (files.Length == 0) { Xl.Bad("该文件夹下没有 Excel / WPS 表格文件。"); return true; }
 
             List<object[,]> blocks = new List<object[,]>();
             int used = 0;
@@ -420,16 +439,19 @@ namespace ExcleHelper
                 {
                     dynamic ws = wb.Worksheets[i];
                     string name = (string)ws.Name;
+                    dynamic nb = null;
                     try
                     {
                         ws.Copy();
-                        dynamic nb = Xl.App.ActiveWorkbook;
+                        nb = Xl.App.ActiveWorkbook;
                         string path = Path.Combine(folder, Safe(name) + ".xlsx");
-                        nb.SaveAs(path);
+                        Xl.SaveWorkbookAsXlsx(nb, path);
                         nb.Close(false);
+                        nb = null;
                         ok++;
                     }
                     catch { }
+                    finally { if (nb != null) { try { nb.Close(false); } catch { } } }
                 }
             }
             finally { Xl.Turn(false); }
@@ -498,17 +520,29 @@ namespace ExcleHelper
                 {
                     List<int> list = groups[k];
                     HashSet<int> keepSet = new HashSet<int>(list);
-                    dynamic copy = sh.Copy(Type.Missing, wb.Worksheets[wb.Worksheets.Count]);
-                    dynamic nb = Xl.App.ActiveWorkbook;
-                    dynamic wsn = nb.Worksheets[1];
-                    bool[] keep = new bool[rows];
-                    for (int i = 0; i < rows; i++) keep[i] = (i < dataStart) || keepSet.Contains(i);
-                    if (header && dataStart == 1) keep[0] = true;
-                    Xl.DeleteRuns(wsn, firstRow, keep);
-                    string path = Path.Combine(folder, Safe(k) + ".xlsx");
-                    nb.SaveAs(path);
-                    nb.Close(false);
-                    ok++;
+                    dynamic nb = null;
+                    try
+                    {
+                        // 无参 Copy() 会把该工作表复制到全新的独立工作簿，不改动原工作簿
+                        sh.Copy();
+                        nb = Xl.App.ActiveWorkbook;
+                        dynamic wsn = nb.Worksheets[1];
+                        bool[] keep = new bool[rows];
+                        for (int i = 0; i < rows; i++) keep[i] = (i < dataStart) || keepSet.Contains(i);
+                        if (header && dataStart == 1) keep[0] = true;
+                        Xl.DeleteRuns(wsn, firstRow, keep);
+                        string path = Path.Combine(folder, Safe(k) + ".xlsx");
+                        Xl.SaveWorkbookAsXlsx(nb, path);
+                        nb.Close(false);
+                        nb = null;
+                        ok++;
+                    }
+                    catch { }
+                    finally
+                    {
+                        if (nb != null) { try { nb.Close(false); } catch { } }
+                        try { wb.Activate(); } catch { }
+                    }
                 }
             }
             finally { Xl.Turn(false); }

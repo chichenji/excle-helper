@@ -60,16 +60,17 @@ namespace ExcleHelper
             [MarshalAs(UnmanagedType.SafeArray, SafeArraySubType = VarEnum.VT_VARIANT)] ref Array custom);
     }
 
-    // Office.IRibbonExtensibility — carried as a dispinterface: Office invokes
-    // GetCustomUI through IDispatch (DispId 1), so InterfaceIsIDispatch is the
-    // shape that actually reaches managed code.
+    // Office.IRibbonExtensibility — declared as a DUAL interface in MSO.DLL
+    // (vtable slot 7 + DispId 1), so InterfaceIsDual works for both Excel
+    // (IDispatch) and WPS Spreadsheets (vtable or IDispatch).
     [ComImport]
     [Guid("000C0396-0000-0000-C000-000000000046")]
-    [InterfaceType(ComInterfaceType.InterfaceIsIDispatch)]
+    [InterfaceType(ComInterfaceType.InterfaceIsDual)]
     public interface IRibbonExtensibility
     {
         [DispId(1)]
-        string GetCustomUI(string RibbonID);
+        [return: MarshalAs(UnmanagedType.BStr)]
+        string GetCustomUI([In, MarshalAs(UnmanagedType.BStr)] string RibbonID);
     }
 
     // Office.IRibbonControl

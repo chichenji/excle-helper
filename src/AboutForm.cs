@@ -61,6 +61,19 @@ private static int TabCount()
             KeyPreview = true;
             KeyDown += delegate(object s, KeyEventArgs e) { if (e.KeyCode == Keys.Escape) Close(); };
             Click += delegate { Close(); };
+            Load += delegate { RoundCorners(); };
+            Resize += delegate { RoundCorners(); };
+        }
+
+        private void RoundCorners()
+        {
+            if (Width <= 0 || Height <= 0) return;
+            using (GraphicsPath p = Rounded(new Rectangle(0, 0, Width, Height), 14))
+            {
+                Region old = Region;
+                Region = new Region(p);
+                if (old != null) old.Dispose();
+            }
         }
 
         protected override void OnPaintBackground(PaintEventArgs e) { }
@@ -78,7 +91,6 @@ private static int TabCount()
                 g.FillPath(b, p);
                 using (Pen pen = new Pen(Color.FromArgb(226, 232, 240)))
                     g.DrawPath(pen, p);
-                Region = new Region(p);
             }
 
             Rectangle header = new Rectangle(0, 0, Width, 96);
@@ -92,7 +104,7 @@ private static int TabCount()
             using (SolidBrush w2 = new SolidBrush(Color.FromArgb(205, 219, 234, 254)))
             {
                 g.DrawString("EXCLE助手", tf, w, 26, 18);
-                g.DrawString("表格效率工具箱  ·  单文件插件", sf, w2, 28, 56);
+                g.DrawString("Excel / WPS 表格效率工具箱  ·  单文件插件", sf, w2, 28, 56);
             }
 
             // 免费徽标
@@ -102,8 +114,8 @@ private static int TabCount()
                 g.FillPath(b, p);
             using (Font bf = new Font("Microsoft YaHei UI", 9f, FontStyle.Bold))
             using (SolidBrush bb = new SolidBrush(Color.White))
+            using (StringFormat f = new StringFormat())
             {
-                StringFormat f = new StringFormat();
                 f.Alignment = StringAlignment.Center;
                 f.LineAlignment = StringAlignment.Center;
                 g.DrawString("全功能免费", bf, bb, badge, f);
@@ -116,7 +128,7 @@ private static int TabCount()
             using (SolidBrush vb = new SolidBrush(Color.FromArgb(71, 85, 105)))
             {
                 g.DrawString("版本", kf, kb, 28, y);
-                g.DrawString("1.1.0   单 DLL / .NET Framework 4.8 / AnyCPU", vf, vb, 96, y); y += 26;
+                g.DrawString("1.1.0   单 DLL / .NET Framework 4.8 / AnyCPU（Excel & WPS）", vf, vb, 96, y); y += 26;
                 g.DrawString("功能", kf, kb, 28, y);
                 g.DrawString(Ops.Count + " 个操作，" + TabCount() + " 个功能选项卡，可搜索 · 可脚本调用", vf, vb, 96, y); y += 26;
                 g.DrawString("架构", kf, kb, 28, y);

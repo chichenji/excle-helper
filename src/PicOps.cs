@@ -51,9 +51,9 @@ namespace ExcleHelper
                 if (bmp == null) { Xl.Bad("二维码生成失败。"); return true; }
                 string path = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
                                                      "exclehelper-qr-" + Guid.NewGuid().ToString("N") + ".png");
-                bmp.Save(path, System.Drawing.Imaging.ImageFormat.Png);
                 try
                 {
+                    bmp.Save(path, System.Drawing.Imaging.ImageFormat.Png);
                     double side = Math.Max(80, (double)cell.Height * 1.4);
                     double left = (double)cell.Left + ((double)cell.Width - side) / 2;
                     double top = (double)cell.Top + 1;
@@ -63,6 +63,7 @@ namespace ExcleHelper
                            + (text.Length > 40 ? text.Substring(0, 40) + "…" : text));
                 }
                 catch (Exception ex) { Xl.Bad("插入图片失败：" + ex.Message); }
+                finally { try { if (File.Exists(path)) File.Delete(path); } catch { } }
             }
             return true;
         }
@@ -82,13 +83,17 @@ namespace ExcleHelper
                         g.CopyFromScreen(b.Left, b.Top, 0, 0, bmp.Size);
                     string path = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
                                                          "exclehelper-snip-" + Guid.NewGuid().ToString("N") + ".png");
-                    bmp.Save(path, System.Drawing.Imaging.ImageFormat.Png);
-                    dynamic cell = Xl.Sel;
-                    double w = Math.Max(160, (double)cell.Width);
-                    double h = w * bmp.Height / Math.Max(1, bmp.Width);
-                    dynamic sh = cell.Worksheet.Shapes.AddPicture(path, false, true,
-                                                                 (double)cell.Left + 1, (double)cell.Top + 1, w, h);
-                    sh.Placement = 1;
+                    try
+                    {
+                        bmp.Save(path, System.Drawing.Imaging.ImageFormat.Png);
+                        dynamic cell = Xl.ActiveCell ?? Xl.Sel;
+                        double w = Math.Max(160, (double)cell.Width);
+                        double h = w * bmp.Height / Math.Max(1, bmp.Width);
+                        dynamic sh = cell.Worksheet.Shapes.AddPicture(path, false, true,
+                                                                     (double)cell.Left + 1, (double)cell.Top + 1, w, h);
+                        sh.Placement = 1;
+                    }
+                    finally { try { if (File.Exists(path)) File.Delete(path); } catch { } }
                 }
                 Xl.Say("已插入屏幕截图（可拖动/缩放调整）。");
             }
@@ -281,13 +286,40 @@ namespace ExcleHelper
                     dynamic co = null;
                     try
                     {
-                        sh.Copy();
-                        co = ws.ChartObjects().Add(0, 0, 200, 200);
-                        dynamic ch = co.Chart;
-                        ch.Paste();
-                        string name = (string)sh.Name;
+                        string name = "pic_" + i;
+                        try { name = (string)sh.Name; } catch { }
+                        foreach (char bad in Path.GetInvalidFileNameChars()) name = name.Replace(bad, '_');
                         string path = Path.Combine(folder, name + ".png");
-                        ch.Export(path, "PNG");
+
+                        bool saved = false;
+                        try
+                        {
+                            sh.CopyPicture(1, 2);   // xlScreen, xlBitmap
+                            if (Clipboard.ContainsImage())
+                            {
+                                using (System.Drawing.Image img = Clipboard.GetImage())
+                                {
+                                    if (img != null && img.Width > 0 && img.Height > 0)
+                                    {
+                                        img.Save(path, System.Drawing.Imaging.ImageFormat.Png);
+                                        saved = true;
+                                    }
+                                }
+                            }
+                        }
+                        catch { }
+
+                        if (!saved)
+                        {
+                            double sw = 200, shh = 200;
+                            try { sw = Math.Max(16, (double)sh.Width); shh = Math.Max(16, (double)sh.Height); } catch { }
+                            sh.Copy();
+                            co = ws.ChartObjects().Add(0, 0, sw, shh);
+                            try { co.Select(); } catch { }
+                            dynamic ch = co.Chart;
+                            ch.Paste();
+                            ch.Export(path, "PNG");
+                        }
                         n++;
                     }
                     catch { }

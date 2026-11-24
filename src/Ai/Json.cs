@@ -28,9 +28,9 @@ namespace ExcleHelper
             if (c == '{') return ParseObject(s, ref i);
             if (c == '[') return ParseArray(s, ref i);
             if (c == '"') return ParseString(s, ref i);
-            if (c == 't') { i += 4; return true; }
-            if (c == 'f') { i += 5; return false; }
-            if (c == 'n') { i += 4; return null; }
+            if (c == 't' && i + 4 <= s.Length && string.CompareOrdinal(s, i, "true", 0, 4) == 0) { i += 4; return true; }
+            if (c == 'f' && i + 5 <= s.Length && string.CompareOrdinal(s, i, "false", 0, 5) == 0) { i += 5; return false; }
+            if (c == 'n' && i + 4 <= s.Length && string.CompareOrdinal(s, i, "null", 0, 4) == 0) { i += 4; return null; }
             return ParseNumber(s, ref i);
         }
 
@@ -44,11 +44,14 @@ namespace ExcleHelper
                 if (i >= s.Length) break;
                 if (s[i] == '}') { i++; break; }
                 if (s[i] == ',') { i++; continue; }
+                int before = i;
+                if (s[i] != '"') { i++; continue; }
                 string key = ParseString(s, ref i);
                 SkipWs(s, ref i);
                 if (i < s.Length && s[i] == ':') i++;
                 object val = ParseValue(s, ref i);
                 d[key] = val;
+                if (i == before) break;
             }
             return d;
         }
@@ -63,7 +66,9 @@ namespace ExcleHelper
                 if (i >= s.Length) break;
                 if (s[i] == ']') { i++; break; }
                 if (s[i] == ',') { i++; continue; }
+                int before = i;
                 list.Add(ParseValue(s, ref i));
+                if (i == before) break;
             }
             return list;
         }
@@ -106,6 +111,11 @@ namespace ExcleHelper
             int start = i;
             while (i < s.Length && (char.IsDigit(s[i]) || s[i] == '-' || s[i] == '+' || s[i] == '.' || s[i] == 'e' || s[i] == 'E'))
                 i++;
+            if (i == start)
+            {
+                if (i < s.Length) i++;   // 跳过非法字符，防止调用方死循环
+                return null;
+            }
             double d;
             if (double.TryParse(s.Substring(start, i - start), NumberStyles.Any, CultureInfo.InvariantCulture, out d))
                 return d;
